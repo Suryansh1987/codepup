@@ -11,3 +11,4 @@ export declare function deployToSWA(zipUrl: string, buildId: string): Promise<{
     previewUrl: string;
     downloadUrl: string;
 }>;
+export declare function runBuildAndDeploy(zipUrl: string, buildId: string): Promise<unknown>;

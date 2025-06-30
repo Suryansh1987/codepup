@@ -334,13 +334,14 @@ app.post("/api/projects/generate", (req, res) => __awaiter(void 0, void 0, void 
         console.log(urls, "urll");
         const builtZipUrl = urls.downloadUrl;
         console.log(`[${buildId}] Deploying to SWA...`);
-        const { previewUrl, downloadUrl } = yield (0, azure_deploy_1.deployToSWA)(builtZipUrl, buildId);
+        const data = yield (0, azure_deploy_1.runBuildAndDeploy)(builtZipUrl, buildId);
+        console.log(data);
         if (projectId) {
             // Update your database with the new URL
         }
         res.json({
             success: true,
-            previewUrl: previewUrl, // SWA preview URL
+            previewUrl: data, // SWA preview URL
             downloadUrl: urls.downloadUrl, // ZIP download URLz
             buildId: buildId,
             hosting: "Azure Static Web Apps",
@@ -367,76 +368,6 @@ app.post("/api/projects/generate", (req, res) => __awaiter(void 0, void 0, void 
             .catch(() => { });
     }
 }));
-// async function runBuildAndDeploy(
-//   zipUrl: string,
-//   outputDir: string
-// ): Promise<string> {
-//   const uniqueImageTag = `react-builder-${uuidv4()}`;
-//   console.log(`[Build] Using unique image tag: ${uniqueImageTag}`);
-//   try {
-//     // Ensure output directory exists and is clean
-//     if (fs.existsSync(outputDir)) {
-//       await fs.promises.rm(outputDir, { recursive: true, force: true });
-//     }
-//     await fs.promises.mkdir(outputDir, { recursive: true });
-//     console.log(`[Build] Prepared clean output directory: ${outputDir}`);
-//     // Build the image with the unique tag
-//     console.log(`[Build] Building image ${uniqueImageTag}...`);
-//     await execPromise(
-//       `docker build --build-arg ZIP_URL="${zipUrl}" -t ${uniqueImageTag} .`,
-//       { cwd: path.resolve(__dirname, "../") }
-//     );
-//     console.log("✅ Docker Build completed");
-//     // Run the container using the same unique tag and mount the correct output directory
-//     console.log(`[Build] Running container for ${uniqueImageTag}...`);
-//     await execPromise(
-//       `docker run --rm -v "${outputDir}:/output" ${uniqueImageTag}`
-//     );
-//     console.log(`✅ Docker Run completed, output copied to: ${outputDir}`);
-//     // Verify files were copied
-//     const outputFiles = await fs.promises.readdir(outputDir);
-//     console.log(
-//       `[Build] Output directory contains ${outputFiles.length} files:`,
-//       outputFiles
-//     );
-//     if (outputFiles.length === 0) {
-//       throw new Error("No files were copied to output directory");
-//     }
-//     // Add vercel.json configuration
-//     const vercelConfig = {
-//       outputDirectory: ".",
-//       headers: [
-//         {
-//           source: "/(.*)",
-//           headers: [{ key: "X-Frame-Options", value: "" }],
-//         },
-//       ],
-//     };
-//     await fs.promises.writeFile(
-//       path.join(outputDir, "vercel.json"),
-//       JSON.stringify(vercelConfig, null, 2)
-//     );
-//     console.log("✅ Added vercel.json configuration");
-//     // Deploy to Vercel
-//     //@ts-ignore
-//     return await vercelDeploy({ outputPath: outputDir });
-//   } catch (error) {
-//     console.error("❌ Build and Deploy pipeline failed:", error);
-//     throw error;
-//   } finally {
-//     // Clean up the ephemeral Docker image to prevent clutter
-//     console.log(`[Build] Cleaning up Docker image: ${uniqueImageTag}`);
-//     try {
-//       await execPromise(`docker rmi ${uniqueImageTag}`);
-//       console.log(`✅ Docker image ${uniqueImageTag} removed.`);
-//     } catch (cleanupError) {
-//       console.warn(
-//         `⚠️ Failed to clean up Docker image ${uniqueImageTag}:`,
-//         cleanupError
-//       );
-//     }
-//   }
-// }
 function execPromise(command, options) {
     return new Promise((resolve, reject) => {
         (0, child_process_1.exec)(command, options, (error, stdout, stderr) => {
@@ -450,27 +381,6 @@ function execPromise(command, options) {
         });
     });
 }
-// const vercelDeploy = ({ outputPath }: { outputPath: string }) => {
-//   console.log(outputPath, "this is the path which the vercel with deploy ");
-//   return new Promise((resolve, reject) => {
-//     exec(`vercel --prod --yes --cwd "${outputPath}"`, (err, stdout, stderr) => {
-//       if (err) {
-//         console.error("❌ Vercel deploy failed:", stderr);
-//         reject(stderr);
-//       } else {
-//         console.log("✅ Vercel deploy output:", stdout);
-//         // Extract the final URL from the output
-//         const match = stdout.match(/https?:\/\/[^\s]+\.vercel\.app/);
-//         const deployedUrl = match ? match[0] : null;
-//         if (deployedUrl) {
-//           resolve(deployedUrl);
-//         } else {
-//           reject("❌ No URL found in Vercel output");
-//         }
-//       }
-//     });
-//   });
-// };
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);

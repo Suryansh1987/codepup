@@ -8,7 +8,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install global dependencies
-RUN npm install -g @azure/static-web-apps-cli@latest typescript
+RUN npm install -g @azure/static-web-apps-cli@latest typescript vercel@latest
 
 # Copy package files
 COPY package*.json ./

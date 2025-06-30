@@ -48,6 +48,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadToAzureBlob = uploadToAzureBlob;
 exports.triggerAzureContainerJob = triggerAzureContainerJob;
 exports.deployToSWA = deployToSWA;
+exports.runBuildAndDeploy = runBuildAndDeploy;
 // This file contains helper functions for Azure deployment
 // fuck this
 const storage_blob_1 = require("@azure/storage-blob");
@@ -264,6 +265,101 @@ function deployToSWA(zipUrl, buildId) {
         }
     });
 }
+function runBuildAndDeploy(zipUrl, buildId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        console.log(`[${buildId}] Starting vercel deployment from ZIP: ${zipUrl}`);
+        const tempDir = path_1.default.join(__dirname, "../../temp", buildId);
+        const tempZipPath = path_1.default.join(tempDir, "build.zip");
+        const extractDir = path_1.default.join(tempDir, "extract");
+        try {
+            yield fs.promises.mkdir(tempDir, { recursive: true });
+            console.log(`[${buildId}] Downloading ZIP...`);
+            const response = yield fetch(zipUrl);
+            if (!response.ok) {
+                throw new Error(`Failed to download ZIP: ${response.statusText}`);
+            }
+            const zipBuffer = yield response.arrayBuffer();
+            yield fs.promises.writeFile(tempZipPath, Buffer.from(zipBuffer));
+            console.log(`[${buildId}] Extracting ZIP...`);
+            yield fs.promises.mkdir(extractDir, { recursive: true });
+            const zip = new adm_zip_1.default(tempZipPath);
+            zip.extractAllTo(extractDir, true);
+            // Add vercel.json configuration
+            const vercelConfig = {
+                outputDirectory: ".",
+                headers: [
+                    {
+                        source: "/(.*)",
+                        headers: [
+                            {
+                                key: "X-Frame-Options",
+                                value: "ALLOWALL",
+                            },
+                            {
+                                key: "Content-Security-Policy",
+                                value: "frame-ancestors *;",
+                            },
+                        ],
+                    },
+                ],
+            };
+            yield fs.promises.writeFile(path_1.default.join(extractDir, "vercel.json"), JSON.stringify(vercelConfig, null, 2));
+            console.log("✅ Added vercel.json configuration");
+            // Deploy to Vercel
+            //@ts-ignore
+            return yield vercelDeploy({ outputPath: extractDir });
+        }
+        catch (error) {
+            console.error("❌ Build and Deploy pipeline failed:", error);
+            throw error;
+        }
+        finally {
+            console.log(`[${buildId}] Cleaning up temporary files...`);
+            // await fs.promises
+            //   .rm(tempDir, { recursive: true, force: true })
+            //   .catch(() => {});
+            // Clean up the ephemeral Docker image to prevent clutter
+        }
+    });
+}
+const vercelDeploy = ({ outputPath }) => {
+    console.log(outputPath, "this is the path which the vercel with deploy ");
+    const token = process.env.VERCEL_TOKEN;
+    if (!token) {
+        throw new Error("Missing required Vercel environment variables");
+    }
+    const deployCommand = [
+        "vercel",
+        "deploy",
+        `--token="${token}"`,
+        "--yes",
+        "--prod",
+        `--cwd="${outputPath}"`,
+    ].join(" ");
+    return new Promise((resolve, reject) => {
+        (0, child_process_1.exec)(deployCommand, {
+            encoding: "utf8",
+            env: Object.assign(Object.assign({}, process.env), { VERCEL_TOKEN: token }),
+        }, (err, stdout, stderr) => {
+            if (err) {
+                console.error("❌ Vercel deploy failed:", stderr);
+                reject(stderr);
+            }
+            else {
+                console.log("✅ Vercel deploy output:", stdout);
+                // Extract the final URL from the output
+                const match = stdout.match(/https?:\/\/[^\s]+\.vercel\.app/);
+                const deployedUrl = match ? match[0] : null;
+                if (deployedUrl) {
+                    resolve(deployedUrl);
+                }
+                else {
+                    reject("❌ No URL found in Vercel output");
+                }
+            }
+        });
+    });
+};
 // Helper function to fetch deployment info
 function fetchDeploymentInfo(storageAccountName, buildId) {
     return __awaiter(this, void 0, void 0, function* () {
