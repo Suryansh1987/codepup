@@ -341,7 +341,7 @@ app.post("/api/projects/generate", (req, res) => __awaiter(void 0, void 0, void 
         res.json({
             success: true,
             previewUrl: previewUrl, // SWA preview URL
-            downloadUrl: urls.downloadUrl, // ZIP download URL
+            downloadUrl: urls.downloadUrl, // ZIP download URLz
             buildId: buildId,
             hosting: "Azure Static Web Apps",
             features: [

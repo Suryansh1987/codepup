@@ -335,7 +335,7 @@ app.post("/api/projects/generate", async (req: Request, res: Response) => {
     res.json({
       success: true,
       previewUrl: previewUrl, // SWA preview URL
-      downloadUrl: urls.downloadUrl, // ZIP download URL
+      downloadUrl: urls.downloadUrl, // ZIP download URLz
       buildId: buildId,
       hosting: "Azure Static Web Apps",
       features: [
@@ -452,27 +452,27 @@ function execPromise(
     });
   });
 }
-// const vercelDeploy = ({ outputPath }: { outputPath: string }) => {
-//   console.log(outputPath, "this is the path which the vercel with deploy ");
-//   return new Promise((resolve, reject) => {
-//     exec(`vercel --prod --yes --cwd "${outputPath}"`, (err, stdout, stderr) => {
-//       if (err) {
-//         console.error("❌ Vercel deploy failed:", stderr);
-//         reject(stderr);
-//       } else {
-//         console.log("✅ Vercel deploy output:", stdout);
-//         // Extract the final URL from the output
-//         const match = stdout.match(/https?:\/\/[^\s]+\.vercel\.app/);
-//         const deployedUrl = match ? match[0] : null;
-//         if (deployedUrl) {
-//           resolve(deployedUrl);
-//         } else {
-//           reject("❌ No URL found in Vercel output");
-//         }
-//       }
-//     });
-//   });
-// };
+const vercelDeploy = ({ outputPath }: { outputPath: string }) => {
+  console.log(outputPath, "this is the path which the vercel with deploy ");
+  return new Promise((resolve, reject) => {
+    exec(`vercel --prod --yes --cwd "${outputPath}"`, (err, stdout, stderr) => {
+      if (err) {
+        console.error("❌ Vercel deploy failed:", stderr);
+        reject(stderr);
+      } else {
+        console.log("✅ Vercel deploy output:", stdout);
+        // Extract the final URL from the output
+        const match = stdout.match(/https?:\/\/[^\s]+\.vercel\.app/);
+        const deployedUrl = match ? match[0] : null;
+        if (deployedUrl) {
+          resolve(deployedUrl);
+        } else {
+          reject("❌ No URL found in Vercel output");
+        }
+      }
+    });
+  });
+};
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
