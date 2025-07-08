@@ -86,7 +86,7 @@ containerName, blobName, data) {
 // Trigger Azure Container App Job to build the project
 function triggerAzureContainerJob(sourceZipUrl, buildId, config) {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a;
+        var _a, _b, _c, _d;
         const buildJobName = `build-${buildId.substring(0, 8)}`;
         // Get access token
         const credential = new identity_1.DefaultAzureCredential();
@@ -97,15 +97,76 @@ function triggerAzureContainerJob(sourceZipUrl, buildId, config) {
             "Content-Type": "application/json",
         };
         try {
-            // Create the job with correct API version
+            // ✅ Correct secrets with proper names
+            const secrets = [
+                {
+                    name: "acr-password",
+                    value: process.env.ACR_PASSWORD,
+                },
+                {
+                    name: "storage-connection-string",
+                    value: config.storageConnectionString,
+                },
+            ];
+            // Add Supabase secrets if provided
+            if (config.supabaseToken) {
+                secrets.push({
+                    name: "supabase-token",
+                    value: config.supabaseToken,
+                });
+            }
+            if (config.databaseUrl) {
+                secrets.push({
+                    name: "database-url",
+                    value: config.databaseUrl,
+                });
+            }
+            // ✅ Correct environment variables with proper secret references
+            const envVars = [
+                { name: "SOURCE_ZIP_URL", value: sourceZipUrl },
+                { name: "BUILD_ID", value: buildId },
+                {
+                    name: "STORAGE_CONNECTION_STRING",
+                    secretRef: "storage-connection-string", // ✅ Correct secret name
+                },
+                {
+                    name: "STORAGE_ACCOUNT_NAME",
+                    value: config.storageAccountName,
+                },
+            ];
+            // Add Supabase environment variables if provided
+            if (config.supabaseToken) {
+                envVars.push({
+                    name: "SUPABASE_TOKEN",
+                    secretRef: "supabase-token", // ✅ Correct secret name
+                });
+            }
+            if (config.databaseUrl) {
+                envVars.push({
+                    name: "DATABASE_URL",
+                    secretRef: "database-url", // ✅ Correct secret name
+                });
+            }
+            if (config.supabaseUrl) {
+                envVars.push({
+                    name: "VITE_SUPABASE_URL",
+                    value: config.supabaseUrl,
+                });
+            }
+            if (config.supabaseAnonKey) {
+                envVars.push({
+                    name: "VITE_SUPABASE_ANON_KEY",
+                    value: config.supabaseAnonKey,
+                });
+            }
             const jobDefinition = {
-                location: "eastus", // Match the actual location
+                location: "eastus",
                 properties: {
                     environmentId: `/subscriptions/${process.env.AZURE_SUBSCRIPTION_ID}/resourceGroups/${config.resourceGroup}/providers/Microsoft.App/managedEnvironments/${config.containerAppEnv}`,
                     configuration: {
                         triggerType: "Manual",
-                        replicaTimeout: 900,
-                        replicaRetryLimit: 0,
+                        replicaTimeout: 1800, // 30 minutes
+                        replicaRetryLimit: 1,
                         manualTriggerConfig: {
                             parallelism: 1,
                             replicaCompletionCount: 1,
@@ -117,72 +178,134 @@ function triggerAzureContainerJob(sourceZipUrl, buildId, config) {
                                 passwordSecretRef: "acr-password",
                             },
                         ],
-                        secrets: [
-                            {
-                                name: "acr-password",
-                                value: process.env.ACR_PASSWORD,
-                            },
-                        ],
+                        secrets: secrets, // ✅ Use the correct secrets array
                     },
                     template: {
                         containers: [
                             {
-                                image: `${config.acrName}.azurecr.io/react-builder:m2`,
+                                image: `${config.acrName}.azurecr.io/react-builder:m7`, // ✅ Use your latest image
                                 name: "react-builder",
                                 resources: {
                                     cpu: 2.0,
                                     memory: "4.0Gi",
                                 },
-                                env: [
-                                    { name: "SOURCE_ZIP_URL", value: sourceZipUrl },
-                                    { name: "BUILD_ID", value: buildId },
-                                    {
-                                        name: "STORAGE_CONNECTION_STRING",
-                                        value: config.storageConnectionString,
-                                    },
-                                    {
-                                        name: "STORAGE_ACCOUNT_NAME",
-                                        value: config.storageAccountName,
-                                    },
-                                ],
+                                env: envVars, // ✅ Use the correct env vars array
                             },
                         ],
                     },
                 },
             };
-            // Use correct API version (2023-05-01)
-            yield axios_1.default.put(`${baseUrl}?api-version=2023-05-01`, jobDefinition, {
-                headers,
-            });
+            console.log(`[${buildId}] Creating job with Supabase support...`);
+            // Create job
+            const createResponse = yield axios_1.default.put(`${baseUrl}?api-version=2023-05-01`, jobDefinition, { headers });
+            console.log(`[${buildId}] Job created successfully:`, createResponse.status);
             // Start the job
-            yield axios_1.default.post(`${baseUrl}/start?api-version=2023-05-01`, {}, { headers });
+            const startResponse = yield axios_1.default.post(`${baseUrl}/start?api-version=2023-05-01`, {}, { headers });
+            console.log(`[${buildId}] Job started:`, startResponse.status);
             // Monitor execution
             let buildCompleted = false;
             let attempts = 0;
-            while (attempts < 30 && !buildCompleted) {
+            let lastExecutionName = "";
+            while (attempts < 45 && !buildCompleted) {
+                // Increased to 45 attempts (7.5 minutes)
                 yield new Promise((resolve) => setTimeout(resolve, 10000));
-                const response = yield axios_1.default.get(`${baseUrl}/executions?api-version=2023-05-01`, { headers });
-                const executions = response.data.value;
-                if (executions && executions.length > 0) {
-                    const status = executions[0].properties.status;
-                    console.log(`[${buildId}] Build job status: ${status}`);
-                    if (status === "Succeeded") {
-                        buildCompleted = true;
+                try {
+                    const response = yield axios_1.default.get(`${baseUrl}/executions?api-version=2023-05-01`, { headers });
+                    const executions = response.data.value;
+                    if (executions && executions.length > 0) {
+                        const execution = executions[0];
+                        const executionName = execution.name;
+                        const status = execution.properties.status;
+                        const startTime = execution.properties.startTime;
+                        const endTime = execution.properties.endTime;
+                        console.log(`[${buildId}] Build job status: ${status} (attempt ${attempts + 1}/45)`);
+                        console.log(`[${buildId}] Execution: ${executionName}`);
+                        console.log(`[${buildId}] Start time: ${startTime}`);
+                        if (endTime)
+                            console.log(`[${buildId}] End time: ${endTime}`);
+                        if (status === "Succeeded") {
+                            console.log(`[${buildId}] ✅ Build completed successfully!`);
+                            buildCompleted = true;
+                        }
+                        else if (status === "Failed") {
+                            // Get logs for debugging
+                            console.error(`[${buildId}] ❌ Build job failed`);
+                            if (execution.properties.error) {
+                                console.error(`[${buildId}] Error details:`, execution.properties.error);
+                            }
+                            throw new Error(`Build job failed. Check logs for details.`);
+                        }
                     }
-                    else if (status === "Failed") {
-                        throw new Error("Build job failed");
+                    else {
+                        console.log(`[${buildId}] No executions found yet...`);
                     }
+                }
+                catch (monitorError) {
+                    console.error(`[${buildId}] Error monitoring job:`, 
+                    //@ts-ignore
+                    ((_a = monitorError.response) === null || _a === void 0 ? void 0 : _a.data) || monitorError.message);
                 }
                 attempts++;
             }
+            if (!buildCompleted) {
+                throw new Error(`Build job timed out after ${attempts} attempts (${attempts * 10} seconds)`);
+            }
             // Clean up
-            yield axios_1.default.delete(`${baseUrl}?api-version=2023-05-01`, { headers });
+            try {
+                yield axios_1.default.delete(`${baseUrl}?api-version=2023-05-01`, { headers });
+                console.log(`[${buildId}] Job cleaned up successfully`);
+            }
+            catch (cleanupError) {
+                console.warn(`[${buildId}] Warning: Could not clean up job:`, 
+                //@ts-ignore
+                cleanupError.message);
+            }
             const downloadUrl = `https://${config.storageAccountName}.blob.core.windows.net/build-outputs/${buildId}/build_${buildId}.zip`;
+            console.log(`[${buildId}] Final download URL: ${downloadUrl}`);
             return JSON.stringify({ downloadUrl });
         }
         catch (error) {
-            console.error(`[${buildId}] Job execution failed:`, ((_a = error.response) === null || _a === void 0 ? void 0 : _a.data) || error.message);
+            console.error(`[${buildId}] Job execution failed:`, {
+                message: error.message,
+                response: (_b = error.response) === null || _b === void 0 ? void 0 : _b.data,
+                status: (_c = error.response) === null || _c === void 0 ? void 0 : _c.status,
+                config: (_d = error.config) === null || _d === void 0 ? void 0 : _d.url,
+            });
             throw error;
+        }
+    });
+}
+// Enhanced logging function
+function getContainerLogs(baseJobUrl, executionName, headers, buildId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b, _c, _d, _e;
+        try {
+            console.log(`[${buildId}] 📋 Fetching execution details for: ${executionName}`);
+            // First, get the execution details to check status
+            const executionUrl = `${baseJobUrl}/executions/${executionName}?api-version=2023-05-01`;
+            const executionResponse = yield axios_1.default.get(executionUrl, {
+                headers,
+                timeout: 10000,
+            });
+            if (executionResponse.data) {
+                console.log(`[${buildId}] Execution Status:`, (_a = executionResponse.data.properties) === null || _a === void 0 ? void 0 : _a.status);
+                console.log(`[${buildId}] Start Time:`, (_b = executionResponse.data.properties) === null || _b === void 0 ? void 0 : _b.startTime);
+                console.log(`[${buildId}] End Time:`, (_c = executionResponse.data.properties) === null || _c === void 0 ? void 0 : _c.endTime);
+                // Log any error details if available
+                if ((_d = executionResponse.data.properties) === null || _d === void 0 ? void 0 : _d.error) {
+                    console.error(`[${buildId}] Execution Error:`, executionResponse.data.properties.error);
+                }
+            }
+            // Note: Direct container logs aren't available via REST API
+            // You need to query Log Analytics or use Azure CLI
+            console.log(`[${buildId}] 📋 To view container logs, use Azure CLI:`);
+            console.log(`az containerapp job logs show --name ${buildId.substring(0, 8)} --resource-group ${process.env.AZURE_RESOURCE_GROUP} --type console`);
+        }
+        catch (error) {
+            console.warn(`[${buildId}] ⚠️ Could not fetch execution details:`, {
+                message: error.message,
+                status: (_e = error.response) === null || _e === void 0 ? void 0 : _e.status,
+            });
         }
     });
 }
@@ -265,7 +388,7 @@ function deployToSWA(zipUrl, buildId) {
         }
     });
 }
-function runBuildAndDeploy(zipUrl, buildId) {
+function runBuildAndDeploy(zipUrl, buildId, envVars) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`[${buildId}] Starting vercel deployment from ZIP: ${zipUrl}`);
         const tempDir = path_1.default.join(__dirname, "../../temp", buildId);
@@ -305,9 +428,13 @@ function runBuildAndDeploy(zipUrl, buildId) {
             };
             yield fs.promises.writeFile(path_1.default.join(extractDir, "vercel.json"), JSON.stringify(vercelConfig, null, 2));
             console.log("✅ Added vercel.json configuration");
+            const deployedUrl = yield vercelDeploy({
+                outputPath: extractDir,
+                envVars,
+            });
             // Deploy to Vercel
             //@ts-ignore
-            return yield vercelDeploy({ outputPath: extractDir });
+            return deployedUrl;
         }
         catch (error) {
             console.error("❌ Build and Deploy pipeline failed:", error);
@@ -322,12 +449,17 @@ function runBuildAndDeploy(zipUrl, buildId) {
         }
     });
 }
-const vercelDeploy = ({ outputPath }) => {
+const vercelDeploy = ({ outputPath, envVars, }) => {
     console.log(outputPath, "this is the path which the vercel with deploy ");
     const token = process.env.VERCEL_TOKEN;
     if (!token) {
         throw new Error("Missing required Vercel environment variables");
     }
+    const envFlags = envVars
+        ? Object.entries(envVars)
+            .map(([key, value]) => `--build-env ${key}="${value}" --env ${key}="${value}"`)
+            .join(" ")
+        : "";
     const deployCommand = [
         "vercel",
         "deploy",
@@ -335,7 +467,10 @@ const vercelDeploy = ({ outputPath }) => {
         "--yes",
         "--prod",
         `--cwd="${outputPath}"`,
-    ].join(" ");
+        envFlags,
+    ]
+        .filter(Boolean)
+        .join(" ");
     return new Promise((resolve, reject) => {
         (0, child_process_1.exec)(deployCommand, {
             encoding: "utf8",
