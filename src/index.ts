@@ -78,80 +78,76 @@ app.post("/api/projects/generate", async (req: Request, res: Response) => {
   }
 
   const buildId = uuidv4();
-  // console.log(`[${buildId}] Starting Azure build for prompt: "${prompt}"`);
+  console.log(`[${buildId}] Starting Azure build for prompt: "${prompt}"`);
 
-  // const sourceTemplateDir = path.join(__dirname, "../react-base");
-  // const tempBuildDir = path.join(__dirname, "../temp-builds", buildId);
+  const sourceTemplateDir = path.join(__dirname, "../react-base");
+  const tempBuildDir = path.join(__dirname, "../temp-builds", buildId);
 
   try {
-    // //  1. Copy template and generate code
-    // await fs.promises.mkdir(tempBuildDir, { recursive: true });
-    // await fs.promises.cp(sourceTemplateDir, tempBuildDir, { recursive: true });
+    //  1. Copy template and generate code
+    await fs.promises.mkdir(tempBuildDir, { recursive: true });
+    await fs.promises.cp(sourceTemplateDir, tempBuildDir, { recursive: true });
 
-    // console.log(`[${buildId}] Generating code from LLM...`);
-    // const frontendResult = await anthropic.messages
-    //   .stream({
-    //     model: "claude-sonnet-4-0",
-    //     max_tokens: 50000,
-    //     temperature: 1,
-    //     system: pro5Enhanced2,
-    //     messages: [
-    //       {
-    //         role: "user",
-    //         content: [{ type: "text", text: prompt }],
-    //       },
-    //     ],
-    //   })
-    //   .on("text", (text) => {
-    //     console.log(text);
-    //   });
-    // const resp = await frontendResult.finalMessage();
-    // const parsedFrontend = parseFrontendCode((resp.content[0] as any).text);
+    console.log(`[${buildId}] Generating code from LLM...`);
+    const frontendResult = await anthropic.messages
+      .stream({
+        model: "claude-sonnet-4-0",
+        max_tokens: 50000,
+        temperature: 1,
+        system: pro5Enhanced2,
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "text", text: prompt }],
+          },
+        ],
+      })
+      .on("text", (text) => {
+        console.log(text);
+      });
+    const resp = await frontendResult.finalMessage();
+    const parsedFrontend = parseFrontendCode((resp.content[0] as any).text);
 
-    // // Write generated files
-    // for (const file of parsedFrontend.codeFiles) {
-    //   const fullPath = path.join(tempBuildDir, file.path);
-    //   await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
-    //   await fs.promises.writeFile(fullPath, file.content, "utf8");
-    // }
+    // Write generated files
+    for (const file of parsedFrontend.codeFiles) {
+      const fullPath = path.join(tempBuildDir, file.path);
+      await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.promises.writeFile(fullPath, file.content, "utf8");
+    }
 
-    // setTimeout(() => {
-    //   Promise.resolve(true);
-    // }, 4000);
-    // // 2. Create zip and upload to Azure (instead of Supabase)
-    // console.log(`[${buildId}] Creating zip and uploading to Azure...`);
-    // const zip = new AdmZip();
-    // zip.addLocalFolder(tempBuildDir);
-    // const zipBuffer = zip.toBuffer();
+    setTimeout(() => {
+      Promise.resolve(true);
+    }, 4000);
+    // 2. Create zip and upload to Azure (instead of Supabase)
+    console.log(`[${buildId}] Creating zip and uploading to Azure...`);
+    const zip = new AdmZip();
+    zip.addLocalFolder(tempBuildDir);
+    const zipBuffer = zip.toBuffer();
 
-    // const zipBlobName = `${buildId}/source.zip`;
-    // const zipUrl = await uploadToAzureBlob(
-    //   process.env.AZURE_STORAGE_CONNECTION_STRING!,
-    //   "source-zips",
-    //   zipBlobName,
-    //   zipBuffer
-    // );
-    // console.log(zipUrl, "this is the url that is send for deployment");
-
-    // // 3. Trigger Azure Container Job (instead of local Docker + Vercel)
-    // console.log(`[${buildId}] Triggering Azure Container Job...`);
-
-    const DistUrl = await triggerAzureContainerJob(
-      "https://reactstore0823.blob.core.windows.net/source-zips/dcb59060-52ab-491d-8626-4ce95c5fbc83/source.zip",
-      buildId,
-      {
-        resourceGroup: process.env.AZURE_RESOURCE_GROUP!,
-        containerAppEnv: process.env.AZURE_CONTAINER_APP_ENV!,
-        acrName: process.env.AZURE_ACR_NAME!,
-        storageConnectionString: process.env.AZURE_STORAGE_CONNECTION_STRING!,
-        storageAccountName: process.env.AZURE_STORAGE_ACCOUNT_NAME!,
-        // ✅ Pass Supabase credentials from request body
-        supabaseToken: supabaseToken,
-        databaseUrl: databaseUrl,
-        supabaseUrl: supabaseUrl,
-        supabaseAnonKey: supabaseAnonKey,
-      }
+    const zipBlobName = `${buildId}/source.zip`;
+    const zipUrl = await uploadToAzureBlob(
+      process.env.AZURE_STORAGE_CONNECTION_STRING!,
+      "source-zips",
+      zipBlobName,
+      zipBuffer
     );
+    console.log(zipUrl, "this is the url that is send for deployment");
+
+    // 3. Trigger Azure Container Job (instead of local Docker + Vercel)
+    console.log(`[${buildId}] Triggering Azure Container Job...`);
+
+    const DistUrl = await triggerAzureContainerJob(zipUrl, buildId, {
+      resourceGroup: process.env.AZURE_RESOURCE_GROUP!,
+      containerAppEnv: process.env.AZURE_CONTAINER_APP_ENV!,
+      acrName: process.env.AZURE_ACR_NAME!,
+      storageConnectionString: process.env.AZURE_STORAGE_CONNECTION_STRING!,
+      storageAccountName: process.env.AZURE_STORAGE_ACCOUNT_NAME!,
+      // ✅ Pass Supabase credentials from request body
+      supabaseToken: supabaseToken,
+      databaseUrl: databaseUrl,
+      supabaseUrl: supabaseUrl,
+      supabaseAnonKey: supabaseAnonKey,
+    });
 
     const urls = JSON.parse(DistUrl);
     console.log(urls, "urll");
@@ -196,22 +192,6 @@ app.post("/api/projects/generate", async (req: Request, res: Response) => {
     // .catch(() => {});
   }
 });
-
-function execPromise(
-  command: string,
-  options?: any
-): Promise<{ stdout: string; stderr: string }> {
-  return new Promise((resolve, reject) => {
-    exec(command, options, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-      } else {
-        //@ts-ignore
-        resolve({ stdout, stderr });
-      }
-    });
-  });
-}
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

@@ -49,7 +49,7 @@ if [ -d "./supabase" ] && [ ! -z "${DATABASE_URL:-}" ] && [ ! -z "${SUPABASE_TOK
   
   # Push database schema
   log "📊 Pushing database schema..."
-  if ! supabase db push --db-url "$DATABASE_URL" ; then
+  if ! supabase db push --db-url "$DATABASE_URL"  ; then
     log "❌ Failed to push database schema"
     exit 1
   fi

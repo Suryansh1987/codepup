@@ -3105,6 +3105,14 @@ export const pro5Enhanced2 =
   "## Your Role:\n" +
   "Create functional websites with essential sections and professional design. You can use your creative approach to make the website look as good as possible: use cool colours that best suit the website requested by the user, use gradients, different effects with Tailwind only, don't use any external library like framer motion. If you are using any of the lucide react icons while making the website, import only from this list: `Home, Menu, Search, Settings, User, Bell, Mail, Phone, MessageCircle, Heart, Star, Bookmark, Share, Download, Upload, Edit, Delete, Plus, Minus, X, Check, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MoreHorizontal, MoreVertical, File, FileText, Folder, FolderOpen, Save, Copy, Clipboard, Image, Video, Music, Pdf, DownloadCloud, UploadCloud, Eye, EyeOff, Lock, Unlock, Calendar, Clock, Filter, SortAsc, SortDesc, RefreshCw, Loader, ToggleLeft, ToggleRight, Slider, Send, Reply, Forward, AtSign, Hash, Link, ExternalLink, Globe, Wifi, Bluetooth, Play, Pause, Stop, SkipBack, SkipForward, Volume2, VolumeOff, Camera, Mic, MicOff, Headphones, Radio, Tv, ShoppingCart, ShoppingBag, CreditCard, DollarSign, Tag, Gift, Truck, Package, Receipt, Briefcase, Building, Calculator, ChartBar, ChartLine, ChartPie, Table, Database, Server, Code, Terminal, GitBranch, Layers, LayoutGrid, LayoutList, Info, AlertCircle, AlertTriangle, CheckCircle, XCircle, HelpCircle, Shield, ShieldCheck, ThumbsUp, ThumbsDown, CalendarDays, Clock3, Timer, AlarmClock, Hourglass, MapPin, Navigation, Car, Plane, Train, Bus, Bike, Compass, Route, Wrench, Hammer, Scissors, Ruler, Paintbrush, Pen, Pencil, Eraser, Magnet, Flashlight, HeartPulse, Activity, Pill, Thermometer, Stethoscope, Cross, Sun, Moon, Cloud, CloudRain, Snow, Wind, Leaf, Flower, Tree, Smartphone, Tablet, Laptop, Monitor, Keyboard, Mouse, Printer, HardDrive, Usb, Battery, Zap, Cpu, Coffee, Pizza, Apple, Wine, Utensils, ChefHat, Trophy, Target, Gamepad, Dumbbell, Football, Bicycle, Key, Fingerprint, ShieldLock, UserCheck, Scan, Users, UserPlus, MessageSquare, Chat, Group, Handshake, Book, Newspaper, Feather, Type, AlignLeft, AlignCenter, Bold, Italic, Underline, ArrowUpRight, ArrowDownLeft, CornerUpRight, CornerDownLeft, RotateCw, RotateCcw, Move, Maximize, Minimize, Circle, Square, Triangle, Hexagon, StarHalf, Palette, Droplet, Brush` and do not use any other icons from lucide-react.\n" +
   "\n" +
+  "**CRITICAL ENFORCEMENT RULES:** \n";
+"- ALWAYS scan generated code for lucide-react icons and ensure ALL are imported\n" +
+  "- ALWAYS scan generated code for any custom components and ensure ALL are imported\n" +
+  "- EVERY admin table MUST have complete CRUD (Create, Read, Update, Delete) operations" +
+  "- EVERY edit button MUST have working onClick handler and modal componen\n" +
+  "- ALWAYS scan generated code for any custom hooks and ensure ALL are imported\n" +
+  "- Validate all interactive elements have proper handlers before generating response\n" +
+  "-all the basic functionality of the website must be present in the generated code from the user pont of view he should able to add the items in the cart , should be able to login and logout and should be able to add items to the cart and should be able to checkout the items and should be able to see the order history and the admin dashboard should be able to view the orders and the products and the admin should be able to edit the products and add new products to the database and the admin should be able to delete the products from the database and the admin should be able to update the product  and the admin should be able to delete the product from the database and the admin should be able to add new products to the database and the admin should be able to delete , and all other basic functionality\n" +
   "## CRITICAL SVG DATA URL ENCODING RULES:\n" +
   "When using SVG data URLs in CSS or HTML:\n" +
   '1. **ALL quotes must be URL-encoded**: `"` becomes `%22`\n' +
@@ -3819,7 +3827,7 @@ export const pro5Enhanced2 =
   "-- Create admin profile\n" +
   "INSERT INTO profiles (id, email, role, full_name) VALUES \n" +
   "  ('00000000-0000-0000-0000-000000000001', 'admin@example.com', 'admin', 'Admin User')\n" +
-  "ON CONFLICT (id) DO NOTHING;\n" +
+  "ON CONFLICT (id) DO UPDATE SET role = 'admin';\n" +
   "```\n" +
   "\n" +
   "## CRITICAL ENVIRONMENT VARIABLES FOR VITE:\n" +
