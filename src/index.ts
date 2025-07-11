@@ -370,7 +370,7 @@ const enhanceRoutesWithTokenTracking = (routeHandler: any, routeName: string) =>
 
 
 app.use("/api/session", enhanceRoutesWithTokenTracking(initializeSessionRoutes(redis), "session"));
-app.use("/api/generate", enhanceRoutesWithTokenTracking(initializeGenerationRoutes( messageDB, sessionManager), "generate"));
+app.use("/api/generate", enhanceRoutesWithTokenTracking(initializeGenerationRoutes( anthropic,messageDB, sessionManager), "generate"));
 app.use("/api/modify", enhanceRoutesWithTokenTracking(initializeModificationRoutes(anthropic, messageDB, redis, sessionManager), "modify"));
 app.use("/api/conversation", enhanceRoutesWithTokenTracking(initializeConversationRoutes(messageDB, redis, sessionManager), "conversation"));
 app.use("/api/redis", enhanceRoutesWithTokenTracking(initializeRedisRoutes(redis), "redis"));
@@ -481,7 +481,7 @@ app.get("/redis-health", (req: Request, res: Response) => {
   res.redirect('/api/redis/health');
 });
 
-// Additional legacy endpoints for backward compatibility with token tracking
+
 app.post("/generateChanges", async (req: Request, res: Response) => {
   console.log('🔄 Legacy generateChanges endpoint called');
   try {
@@ -547,7 +547,7 @@ app.post("/write-files", async (req: Request, res: Response) => {
   }
 });
 
-// FIXED: Improved cleanup job that respects the 1-hour schedule
+
 async function performCleanup(): Promise<void> {
   try {
     const tempBuildsDir = path.join(__dirname, "../temp-builds");

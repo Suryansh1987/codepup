@@ -293,7 +293,7 @@ class EnhancedProjectUrlManager {
     /**
      * Simple method for generation route (no complex duplicate checking needed for new projects)
      */
-    saveNewProjectUrls(sessionId, projectId, urls, userId, projectData) {
+    saveNewProjectUrls(sessionId, projectId, urls, userId, projectData, aneonkey, supabaseurl) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 console.log(`🔍 [DEBUG] saveNewProjectUrls called with:`);
@@ -316,6 +316,8 @@ class EnhancedProjectUrlManager {
                     yield this.messageDB.updateProject(existingProject.id, {
                         deploymentUrl: urls.deploymentUrl,
                         downloadUrl: urls.downloadUrl,
+                        aenonkey: aneonkey,
+                        supabaseurl: supabaseurl,
                         zipUrl: urls.zipUrl,
                         lastSessionId: sessionId,
                         name: projectData.name || existingProject.name,

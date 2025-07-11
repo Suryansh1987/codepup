@@ -26,9 +26,6 @@ class DrizzleMessageHistoryDB {
     // Additional methods to add to your DrizzleMessageHistoryDB class
     // Add these methods to your existing DrizzleMessageHistoryDB class in db/messagesummary.ts
     // Add these methods to your DrizzleMessageHistoryDB class
-    /**
-     * Get a single project by ID
-     */
     getProject(projectId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -67,9 +64,19 @@ class DrizzleMessageHistoryDB {
             }
         });
     }
-    /**
-     * Update project with general data
-     */
+    getProjectSecretsById(projectId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const result = yield this.db
+                .select({
+                aneonkey: message_schema_1.projects.aneonkey,
+                supabaseurl: message_schema_1.projects.supabaseurl,
+            })
+                .from(message_schema_1.projects)
+                .where((0, drizzle_orm_1.eq)(message_schema_1.projects.id, projectId))
+                .limit(1);
+            return result[0]; // returns { aneonkey, supabaseurl } or undefined
+        });
+    }
     updateProject(projectId, updateData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -100,7 +107,6 @@ class DrizzleMessageHistoryDB {
                         error: `Project ${projectId} not found`
                     };
                 }
-                // Get messages from CI messages table linked to this project
                 const projectMessages = yield this.db
                     .select()
                     .from(message_schema_1.ciMessages)
@@ -119,7 +125,6 @@ class DrizzleMessageHistoryDB {
                 const uniqueMessages = allMessages.filter((msg, index, self) => index === self.findIndex(m => m.id === msg.id));
                 // Sort by creation date
                 uniqueMessages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-                // Format messages for frontend
                 const formattedMessages = uniqueMessages.slice(0, limit).map(msg => ({
                     id: msg.id,
                     content: msg.content,
@@ -601,7 +606,6 @@ class DrizzleMessageHistoryDB {
             }
         });
     }
-    // Method to update project URLs
     updateProjectUrls(projectId, updateData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
@@ -623,8 +627,10 @@ class DrizzleMessageHistoryDB {
             try {
                 // Ensure the user exists before creating project
                 yield this.ensureUserExists(projectData.userId);
+                //@ts-ignore
                 const result = yield this.db
                     .insert(message_schema_1.projects)
+                    //@ts-ignore
                     .values(Object.assign(Object.assign({}, projectData), { createdAt: new Date(), updatedAt: new Date() }))
                     .returning({ id: message_schema_1.projects.id });
                 const projectId = result[0].id;

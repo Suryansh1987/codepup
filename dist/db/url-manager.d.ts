@@ -71,7 +71,7 @@ export declare class EnhancedProjectUrlManager {
         description?: string;
         framework?: string;
         template?: string;
-    }): Promise<number>;
+    }, aneonkey: string, supabaseurl: string): Promise<number>;
     getProjectById(projectId: number): Promise<any>;
     /**
      * Get user's project statistics

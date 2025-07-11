@@ -77,9 +77,7 @@ export class DrizzleMessageHistoryDB {
 
 // Add these methods to your DrizzleMessageHistoryDB class
 
-/**
- * Get a single project by ID
- */
+
 async getProject(projectId: number): Promise<any> {
   try {
     const result = await this.db
@@ -94,6 +92,8 @@ async getProject(projectId: number): Promise<any> {
     return null;
   }
 }
+
+
 
 /**
  * Update project title and conversation metadata
@@ -119,9 +119,18 @@ async updateProjectTitle(projectId: number, updateData: {
   }
 }
 
-/**
- * Update project with general data
- */
+ async  getProjectSecretsById(projectId: number) {
+  const result = await this.db
+    .select({
+      aneonkey: projects.aneonkey,
+      supabaseurl: projects.supabaseurl,
+    })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1);
+
+  return result[0]; // returns { aneonkey, supabaseurl } or undefined
+}
 async updateProject(projectId: number, updateData: {
   name?: string;
   description?: string;
@@ -162,7 +171,6 @@ async getProjectMessages(projectId: number, limit: number = 50): Promise<{
       };
     }
 
-    // Get messages from CI messages table linked to this project
     const projectMessages = await this.db
       .select()
       .from(messages)
@@ -189,7 +197,7 @@ async getProjectMessages(projectId: number, limit: number = 50): Promise<{
       new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
     );
 
-    // Format messages for frontend
+
     const formattedMessages = uniqueMessages.slice(0, limit).map(msg => ({
       id: msg.id,
       content: msg.content,
@@ -749,7 +757,7 @@ async getUserProjects(userId: number): Promise<any[]> {
     }
   }
 
-  // Method to update project URLs
+
   async updateProjectUrls(projectId: number, updateData: {
     deploymentUrl: string;
     downloadUrl: string;
@@ -793,9 +801,10 @@ async getUserProjects(userId: number): Promise<any[]> {
     try {
       // Ensure the user exists before creating project
       await this.ensureUserExists(projectData.userId);
-      
+      //@ts-ignore
       const result = await this.db
         .insert(projects)
+        //@ts-ignore
         .values({
           ...projectData,
           createdAt: new Date(),

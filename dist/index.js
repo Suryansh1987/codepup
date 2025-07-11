@@ -381,7 +381,7 @@ const enhanceRoutesWithTokenTracking = (routeHandler, routeName) => {
     };
 };
 app.use("/api/session", enhanceRoutesWithTokenTracking((0, session_1.initializeSessionRoutes)(redis), "session"));
-app.use("/api/generate", enhanceRoutesWithTokenTracking((0, generation_1.initializeGenerationRoutes)(messageDB, sessionManager), "generate"));
+app.use("/api/generate", enhanceRoutesWithTokenTracking((0, generation_1.initializeGenerationRoutes)(anthropic, messageDB, sessionManager), "generate"));
 app.use("/api/modify", enhanceRoutesWithTokenTracking((0, modification_1.initializeModificationRoutes)(anthropic, messageDB, redis, sessionManager), "modify"));
 app.use("/api/conversation", enhanceRoutesWithTokenTracking((0, conversation_1.initializeConversationRoutes)(messageDB, redis, sessionManager), "conversation"));
 app.use("/api/redis", enhanceRoutesWithTokenTracking((0, redis_stats_1.initializeRedisRoutes)(redis), "redis"));
@@ -479,7 +479,6 @@ app.get("/redis-health", (req, res) => {
     tokenTracker.logUsage({ input_tokens: 0, output_tokens: 0 }, 'legacy-redis-health-redirect', 'deprecated');
     res.redirect('/api/redis/health');
 });
-// Additional legacy endpoints for backward compatibility with token tracking
 app.post("/generateChanges", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('🔄 Legacy generateChanges endpoint called');
     try {
@@ -541,7 +540,6 @@ app.post("/write-files", (req, res) => __awaiter(void 0, void 0, void 0, functio
         res.status(500).json({ error: 'Legacy endpoint error' });
     }
 }));
-// FIXED: Improved cleanup job that respects the 1-hour schedule
 function performCleanup() {
     return __awaiter(this, void 0, void 0, function* () {
         try {

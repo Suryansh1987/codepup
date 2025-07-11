@@ -33,7 +33,8 @@ exports.projects = (0, pg_core_1.pgTable)('projects', {
     zipUrl: (0, pg_core_1.text)('zip_url'),
     buildId: (0, pg_core_1.text)('build_id'),
     githubUrl: (0, pg_core_1.text)('github_url'),
-    // Session and conversation tracking
+    aneonkey: (0, pg_core_1.varchar)('aneon_key').notNull(),
+    supabaseurl: (0, pg_core_1.varchar)('supabase_url').notNull(),
     lastSessionId: (0, pg_core_1.text)('last_session_id'),
     conversationTitle: (0, pg_core_1.varchar)('conversation_title', { length: 255 }).default('Project Chat'),
     lastMessageAt: (0, pg_core_1.timestamp)('last_message_at'),

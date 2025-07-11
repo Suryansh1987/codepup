@@ -332,7 +332,23 @@ function cleanupTempDirectory(buildId) {
         }
     });
 }
-// Database helper to find project by URL
+// NEW: Function to write environment variables before build
+function writeEnvironmentVariables(tempBuildDir, aneonKey, supabaseUrl) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const envContent = `VITE_SUPABASE_URL=${supabaseUrl}
+VITE_SUPABASE_ANON_KEY=${aneonKey}
+`;
+            const envPath = path_1.default.join(tempBuildDir, '.env');
+            yield fs.promises.writeFile(envPath, envContent, 'utf8');
+            console.log(`✅ Environment variables written to: ${envPath}`);
+        }
+        catch (error) {
+            console.error('❌ Failed to write environment variables:', error);
+            throw new Error(`Failed to write .env file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    });
+}
 function findProjectByUrl(messageDB, userId, searchUrl) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -367,7 +383,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
     const urlManager = new url_manager_1.EnhancedProjectUrlManager(messageDB);
     // STATELESS STREAMING MODIFICATION ENDPOINT WITH URL-BASED RESOLUTION
     router.post("/stream", (req, res) => __awaiter(this, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g;
         const { prompt, sessionId: clientSessionId, userId: providedUserId, currentUrl, deployedUrl, projectId: requestedProjectId } = req.body;
         if (!prompt) {
             res.status(400).json({
@@ -378,7 +394,19 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
         }
         const sessionId = clientSessionId || sessionManager.generateSessionId();
         const buildId = (0, uuid_1.v4)();
-        // Resolve user ID dynamically
+        const secrets = yield messageDB.getProjectSecretsById(requestedProjectId);
+        if (!secrets) {
+            console.error(`[${buildId}] ❌ Failed to retrieve project secrets for projectId: `);
+            return;
+        }
+        if (secrets) {
+            const { aneonkey, supabaseurl } = secrets;
+            console.log('Aneon Key:', aneonkey);
+            console.log('Supabase URL:', supabaseurl);
+        }
+        else {
+            console.log('No project found with that ID');
+        }
         let userId;
         try {
             userId = yield resolveUserId(messageDB, providedUserId, sessionId);
@@ -427,7 +455,6 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
             else {
                 console.log(`[${buildId}] ⚠️ No existing project matched, will create new one`);
             }
-            // Enhanced progress messaging based on match reason
             if (matchReason === 'deployed_url_match') {
                 sendEvent('progress', {
                     step: 2,
@@ -547,7 +574,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                     sendEvent('progress', { step: 5, total: 16, message: 'Loaded conversation context!', buildId, sessionId });
                 }
             }
-            catch (_f) {
+            catch (_h) {
                 sendEvent('progress', { step: 5, total: 16, message: 'Continuing with fresh modification...', buildId, sessionId });
             }
             const fileModifier = new filemodifier_1.StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId);
@@ -569,6 +596,11 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
             if (result.success) {
                 sendEvent('progress', { step: 8, total: 16, message: 'Modification complete! Building...', buildId, sessionId });
                 try {
+                    // Write environment variables before build
+                    if ((secrets === null || secrets === void 0 ? void 0 : secrets.aneonkey) && (secrets === null || secrets === void 0 ? void 0 : secrets.supabaseurl)) {
+                        sendEvent('progress', { step: 9, total: 16, message: 'Setting up environment variables...', buildId, sessionId });
+                        yield writeEnvironmentVariables(tempBuildDir, secrets.aneonkey, secrets.supabaseurl);
+                    }
                     const zip = new adm_zip_1.default();
                     zip.addLocalFolder(tempBuildDir);
                     const zipBuffer = zip.toBuffer();
@@ -612,7 +644,8 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                 description: userProject === null || userProject === void 0 ? void 0 : userProject.description,
                                 framework: (userProject === null || userProject === void 0 ? void 0 : userProject.framework) || 'react',
                                 template: (userProject === null || userProject === void 0 ? void 0 : userProject.template) || 'vite-react-ts'
-                            });
+                            }, (_c = secrets.aneonkey) !== null && _c !== void 0 ? _c : '', // ✅ convert `string | null` to `string`
+                            (_d = secrets.supabaseurl) !== null && _d !== void 0 ? _d : '');
                             urlResult = {
                                 action: 'updated',
                                 projectId: updatedProjectId,
@@ -644,12 +677,12 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                             approach: result.approach || 'UNKNOWN',
                             selectedFiles: result.selectedFiles || [],
                             addedFiles: result.addedFiles || [],
-                            modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_c = result.modifiedRanges) === null || _c === void 0 ? void 0 : _c.length) || 0),
+                            modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_e = result.modifiedRanges) === null || _e === void 0 ? void 0 : _e.length) || 0),
                             reasoning: result.reasoning,
                             modificationSummary: result.modificationSummary,
                             modificationDuration,
                             totalDuration,
-                            totalFilesAffected: (((_d = result.selectedFiles) === null || _d === void 0 ? void 0 : _d.length) || 0) + (((_e = result.addedFiles) === null || _e === void 0 ? void 0 : _e.length) || 0),
+                            totalFilesAffected: (((_f = result.selectedFiles) === null || _f === void 0 ? void 0 : _f.length) || 0) + (((_g = result.addedFiles) === null || _g === void 0 ? void 0 : _g.length) || 0),
                             previewUrl,
                             downloadUrl: urls.downloadUrl,
                             zipUrl,
@@ -731,10 +764,10 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
     }));
     // NON-STREAMING MODIFICATION ENDPOINT WITH URL-BASED RESOLUTION
     router.post("/", (req, res) => __awaiter(this, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g;
         try {
             const { prompt, sessionId: clientSessionId, userId: providedUserId, currentUrl, // NEW: Current page URL
-            deployedUrl // NEW: Deployed app URL
+            deployedUrl, projectId: requestedProjectId // NEW: Deployed app URL
              } = req.body;
             if (!prompt) {
                 res.status(400).json({
@@ -745,7 +778,19 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
             }
             const sessionId = clientSessionId || sessionManager.generateSessionId();
             const buildId = (0, uuid_1.v4)();
-            // Resolve user ID dynamically
+            const secrets = yield messageDB.getProjectSecretsById(requestedProjectId);
+            if (!secrets) {
+                console.error(`[${buildId}] ❌ Failed to retrieve project secrets for projectId: `);
+                return;
+            }
+            if (secrets) {
+                const { aneonkey, supabaseurl } = secrets;
+                console.log('Aneon Key:', aneonkey);
+                console.log('Supabase URL:', supabaseurl);
+            }
+            else {
+                console.log('No project found with that ID');
+            }
             let userId;
             try {
                 userId = yield resolveUserId(messageDB, providedUserId, sessionId);
@@ -917,7 +962,11 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                     // BUILD & DEPLOY PIPELINE
                     try {
                         console.log(`[${buildId}] Starting build pipeline...`);
-                        // Create zip and upload to Azure
+                        // Write environment variables before build
+                        if ((secrets === null || secrets === void 0 ? void 0 : secrets.aneonkey) && (secrets === null || secrets === void 0 ? void 0 : secrets.supabaseurl)) {
+                            console.log(`[${buildId}] Writing environment variables...`);
+                            yield writeEnvironmentVariables(tempBuildDir, secrets.aneonkey, secrets.supabaseurl);
+                        }
                         const zip = new adm_zip_1.default();
                         zip.addLocalFolder(tempBuildDir);
                         const zipBuffer = zip.toBuffer();
@@ -960,7 +1009,8 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                     description: targetProject === null || targetProject === void 0 ? void 0 : targetProject.description,
                                     framework: (targetProject === null || targetProject === void 0 ? void 0 : targetProject.framework) || 'react',
                                     template: (targetProject === null || targetProject === void 0 ? void 0 : targetProject.template) || 'vite-react-ts'
-                                });
+                                }, (_b = secrets.aneonkey) !== null && _b !== void 0 ? _b : '', // ✅ convert `string | null` to `string`
+                                (_c = secrets.supabaseurl) !== null && _c !== void 0 ? _c : '');
                                 urlResult = {
                                     action: 'updated',
                                     projectId: updatedProjectId,
@@ -992,12 +1042,12 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                 approach: result.approach || 'UNKNOWN',
                                 selectedFiles: result.selectedFiles || [],
                                 addedFiles: result.addedFiles || [],
-                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_b = result.modifiedRanges) === null || _b === void 0 ? void 0 : _b.length) || 0),
+                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_d = result.modifiedRanges) === null || _d === void 0 ? void 0 : _d.length) || 0),
                                 conversationContext: "Enhanced context with Redis-backed modification history",
                                 reasoning: result.reasoning,
                                 modificationSummary: result.modificationSummary,
                                 modificationDuration: modificationDuration,
-                                totalFilesAffected: (((_c = result.selectedFiles) === null || _c === void 0 ? void 0 : _c.length) || 0) + (((_d = result.addedFiles) === null || _d === void 0 ? void 0 : _d.length) || 0),
+                                totalFilesAffected: (((_e = result.selectedFiles) === null || _e === void 0 ? void 0 : _e.length) || 0) + (((_f = result.addedFiles) === null || _f === void 0 ? void 0 : _f.length) || 0),
                                 previewUrl: previewUrl,
                                 downloadUrl: urls.downloadUrl,
                                 zipUrl: zipUrl,
@@ -1034,7 +1084,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                 approach: result.approach || 'UNKNOWN',
                                 selectedFiles: result.selectedFiles || [],
                                 addedFiles: result.addedFiles || [],
-                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_e = result.modifiedRanges) === null || _e === void 0 ? void 0 : _e.length) || 0),
+                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_g = result.modifiedRanges) === null || _g === void 0 ? void 0 : _g.length) || 0),
                                 buildError: buildError instanceof Error ? buildError.message : 'Build failed',
                                 buildId: buildId,
                                 sessionId: sessionId,

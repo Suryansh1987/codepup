@@ -2,7 +2,7 @@
 import express, { Request, Response } from "express";
 import { StatelessIntelligentFileModifier } from '../services/filemodifier';
 import { StatelessSessionManager } from './session';
-import { DrizzleMessageHistoryDB } from '../db/messagesummary';
+import { DrizzleMessageHistoryDB, } from '../db/messagesummary';
 import { RedisService } from '../services/Redis';
 import { EnhancedProjectUrlManager } from '../db/url-manager';
 import { ModificationChange } from '../services/filemodifier/types';
@@ -325,7 +325,21 @@ async function cleanupTempDirectory(buildId: string): Promise<void> {
   }
 }
 
-// Database helper to find project by URL
+// NEW: Function to write environment variables before build
+async function writeEnvironmentVariables(tempBuildDir: string, aneonKey: string, supabaseUrl: string): Promise<void> {
+  try {
+    const envContent = `VITE_SUPABASE_URL=${supabaseUrl}
+VITE_SUPABASE_ANON_KEY=${aneonKey}
+`;
+    
+    const envPath = path.join(tempBuildDir, '.env');
+    await fs.promises.writeFile(envPath, envContent, 'utf8');
+    console.log(`✅ Environment variables written to: ${envPath}`);
+  } catch (error) {
+    console.error('❌ Failed to write environment variables:', error);
+    throw new Error(`Failed to write .env file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
 async function findProjectByUrl(
   messageDB: DrizzleMessageHistoryDB,
   userId: number,
@@ -389,7 +403,21 @@ export function initializeModificationRoutes(
     const sessionId = clientSessionId || sessionManager.generateSessionId();
     const buildId = uuidv4();
     
-    // Resolve user ID dynamically
+  const secrets = await messageDB.getProjectSecretsById(requestedProjectId);
+if (!secrets) {
+  console.error(`[${buildId}] ❌ Failed to retrieve project secrets for projectId: `);
+ 
+  return;
+}
+if (secrets) {
+  const { aneonkey, supabaseurl } = secrets;
+
+  console.log('Aneon Key:', aneonkey);
+  console.log('Supabase URL:', supabaseurl);
+} else {
+  console.log('No project found with that ID');
+}
+
     let userId: number;
     try {
       userId = await resolveUserId(messageDB, providedUserId, sessionId);
@@ -452,7 +480,7 @@ export function initializeModificationRoutes(
         console.log(`[${buildId}] ⚠️ No existing project matched, will create new one`);
       }
 
-      // Enhanced progress messaging based on match reason
+      
       if (matchReason === 'deployed_url_match') {
         sendEvent('progress', { 
           step: 2, 
@@ -607,6 +635,11 @@ export function initializeModificationRoutes(
         sendEvent('progress', { step: 8, total: 16, message: 'Modification complete! Building...', buildId, sessionId });
 
         try {
+          // Write environment variables before build
+    if (secrets?.aneonkey && secrets?.supabaseurl) {
+      sendEvent('progress', { step: 9, total: 16, message: 'Setting up environment variables...', buildId, sessionId });
+      await writeEnvironmentVariables(tempBuildDir, secrets.aneonkey, secrets.supabaseurl);
+    }
           const zip = new AdmZip();
           zip.addLocalFolder(tempBuildDir);
           const zipBuffer = zip.toBuffer();
@@ -674,7 +707,9 @@ export function initializeModificationRoutes(
                   description: userProject?.description,
                   framework: userProject?.framework || 'react',
                   template: userProject?.template || 'vite-react-ts'
-                }
+                },
+           secrets.aneonkey ?? '',      // ✅ convert `string | null` to `string`
+  secrets.supabaseurl ?? ''
               );
 
               urlResult = { 
@@ -808,7 +843,8 @@ export function initializeModificationRoutes(
         sessionId: clientSessionId,
         userId: providedUserId,
         currentUrl,    // NEW: Current page URL
-        deployedUrl    // NEW: Deployed app URL
+        deployedUrl ,
+         projectId: requestedProjectId       // NEW: Deployed app URL
       } = req.body;
       
       if (!prompt) {
@@ -822,7 +858,20 @@ export function initializeModificationRoutes(
       const sessionId = clientSessionId || sessionManager.generateSessionId();
       const buildId = uuidv4();
       
-      // Resolve user ID dynamically
+       const secrets = await messageDB.getProjectSecretsById(requestedProjectId);
+if (!secrets) {
+  console.error(`[${buildId}] ❌ Failed to retrieve project secrets for projectId: `);
+ 
+  return;
+}
+if (secrets) {
+  const { aneonkey, supabaseurl } = secrets;
+
+  console.log('Aneon Key:', aneonkey);
+  console.log('Supabase URL:', supabaseurl);
+} else {
+  console.log('No project found with that ID');
+}
       let userId: number;
       try {
         userId = await resolveUserId(messageDB, providedUserId, sessionId);
@@ -1017,7 +1066,11 @@ export function initializeModificationRoutes(
           try {
             console.log(`[${buildId}] Starting build pipeline...`);
             
-            // Create zip and upload to Azure
+           // Write environment variables before build
+  if (secrets?.aneonkey && secrets?.supabaseurl) {
+    console.log(`[${buildId}] Writing environment variables...`);
+    await writeEnvironmentVariables(tempBuildDir, secrets.aneonkey, secrets.supabaseurl);
+  }
             const zip = new AdmZip();
             zip.addLocalFolder(tempBuildDir);
             const zipBuffer = zip.toBuffer();
@@ -1083,7 +1136,9 @@ export function initializeModificationRoutes(
                     description: targetProject?.description,
                     framework: targetProject?.framework || 'react',
                     template: targetProject?.template || 'vite-react-ts'
-                  }
+                  },
+                  secrets.aneonkey ?? '',      // ✅ convert `string | null` to `string`
+  secrets.supabaseurl ?? ''
                 );
 
                 urlResult = { 

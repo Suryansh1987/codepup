@@ -346,8 +346,9 @@ export class EnhancedProjectUrlManager {
     description?: string;
     framework?: string;
     template?: string;
-  }
-): Promise<number> {
+  },
+  aneonkey: string,
+  supabaseurl:string): Promise<number> {
   try {
     console.log(`🔍 [DEBUG] saveNewProjectUrls called with:`);
     console.log(`  - sessionId: ${sessionId}`);
@@ -372,6 +373,8 @@ export class EnhancedProjectUrlManager {
       await this.messageDB.updateProject(existingProject.id, {
         deploymentUrl: urls.deploymentUrl,
         downloadUrl: urls.downloadUrl,
+        aenonkey:aneonkey,
+        supabaseurl:supabaseurl,
         zipUrl: urls.zipUrl,
         lastSessionId: sessionId,
         name: projectData.name || existingProject.name,

@@ -34,7 +34,9 @@ export const projects = pgTable('projects', {
   buildId: text('build_id'),
   githubUrl: text('github_url'),
   
-  // Session and conversation tracking
+  aneonkey:varchar('aneon_key').notNull(),
+  supabaseurl:varchar('supabase_url').notNull(),
+
   lastSessionId: text('last_session_id'),
   conversationTitle: varchar('conversation_title', { length: 255 }).default('Project Chat'),
   lastMessageAt: timestamp('last_message_at'),

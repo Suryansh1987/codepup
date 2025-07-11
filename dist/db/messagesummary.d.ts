@@ -38,9 +38,6 @@ export declare class DrizzleMessageHistoryDB {
     private anthropic;
     private defaultSessionId;
     constructor(databaseUrl: string, anthropic: Anthropic);
-    /**
-     * Get a single project by ID
-     */
     getProject(projectId: number): Promise<any>;
     /**
      * Update project title and conversation metadata
@@ -49,9 +46,10 @@ export declare class DrizzleMessageHistoryDB {
         conversationTitle?: string;
         updatedAt: Date;
     }): Promise<void>;
-    /**
-     * Update project with general data
-     */
+    getProjectSecretsById(projectId: number): Promise<{
+        aneonkey: string;
+        supabaseurl: string;
+    }>;
     updateProject(projectId: number, updateData: {
         name?: string;
         description?: string;
