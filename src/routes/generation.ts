@@ -8,7 +8,7 @@ import {
   triggerAzureContainerJob,
   runBuildAndDeploy,
 } from "../services/azure-deploy_fullstack";
-import { EnhancedProjectUrlManager } from '../db/url-manager'; // ADD THIS LINE
+import { EnhancedProjectUrlManager } from '../db/url-manager';
 import { 
   parseFrontendCode,
   validateTailwindConfig,
@@ -29,6 +29,19 @@ interface FileData {
   content: string;
 }
 
+interface StreamingProgressData {
+  type: 'progress' | 'length' | 'chunk' | 'complete' | 'error';
+  buildId: string;
+  sessionId: string;
+  totalLength?: number;
+  currentLength?: number;
+  percentage?: number;
+  chunk?: string;
+  phase?: 'generating' | 'parsing' | 'processing' | 'deploying' | 'complete';
+  message?: string;
+  error?: string;
+}
+
 // FIXED: Better cleanup with proper error handling and timing
 async function cleanupTempDirectory(buildId: string): Promise<void> {
   const tempBuildDir = path.join(__dirname, "../../temp-builds", buildId);
@@ -43,6 +56,7 @@ async function cleanupTempDirectory(buildId: string): Promise<void> {
     console.warn(`[${buildId}] ⚠️ Failed to cleanup temp directory:`, error);
   }
 }
+
 // ADD THIS ENTIRE FUNCTION
 async function resolveUserId(
   messageDB: DrizzleMessageHistoryDB,
@@ -83,6 +97,7 @@ async function resolveUserId(
     throw new Error('Could not resolve or create user');
   }
 }
+
 function scheduleCleanup(buildId: string, delayInHours: number = 1): void {
   const delayMs = delayInHours * 60 * 60 * 1000; // Convert hours to milliseconds
   
@@ -94,13 +109,20 @@ function scheduleCleanup(buildId: string, delayInHours: number = 1): void {
   console.log(`[${buildId}] ⏰ Cleanup scheduled for ${delayInHours} hour(s) from now`);
 }
 
+// NEW: Helper function to send streaming updates
+function sendStreamingUpdate(res: Response, data: StreamingProgressData): void {
+  res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 export function initializeGenerationRoutes(
   anthropic: Anthropic,
   messageDB: DrizzleMessageHistoryDB,
   sessionManager: StatelessSessionManager
 ): express.Router {
   const urlManager = new EnhancedProjectUrlManager(messageDB);
-  router.post("/", async (req: Request, res: Response): Promise<void> => {
+  
+  // NEW: Streaming endpoint
+  router.post("/stream", async (req: Request, res: Response): Promise<void> => {
     const { 
       prompt,
       projectId,
@@ -122,27 +144,50 @@ export function initializeGenerationRoutes(
     const buildId = uuidv4();
     const sessionId = sessionManager.generateSessionId();
 
+    // Set up Server-Sent Events
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Send initial progress
+    sendStreamingUpdate(res, {
+      type: 'progress',
+      buildId,
+      sessionId,
+      phase: 'generating',
+      message: 'Starting code generation...',
+      percentage: 0
+    });
+
     let userId: number;
-try {
-  userId = await resolveUserId(messageDB, providedUserId, sessionId);
-  console.log(`[${buildId}] Resolved user ID: ${userId} (provided: ${providedUserId})`);
-} catch (error) {
-  res.status(500).json({
-    success: false,
-    error: 'Failed to resolve user for project generation',
-    details: error instanceof Error ? error.message : 'Unknown error',
-    buildId,
-    sessionId
-  });
-  return;
-}
-    console.log(`[${buildId}] Starting generation for prompt: "${prompt.substring(0, 100)}..."`);
-    console.log(`[${buildId}] Session: ${sessionId}`);
+    try {
+      userId = await resolveUserId(messageDB, providedUserId, sessionId);
+      console.log(`[${buildId}] Resolved user ID: ${userId} (provided: ${providedUserId})`);
+    } catch (error) {
+      sendStreamingUpdate(res, {
+        type: 'error',
+        buildId,
+        sessionId,
+        error: 'Failed to resolve user for project generation'
+      });
+      res.end();
+      return;
+    }
+
+    console.log(`[${buildId}] Starting streaming generation for prompt: "${prompt.substring(0, 100)}..."`);
     
     const sourceTemplateDir = path.join(__dirname, "../../react-base");
     const tempBuildDir = path.join(__dirname, "../../temp-builds", buildId);
-let finalProjectId: number = projectId || 0;
-let projectSaved = false;
+    let finalProjectId: number = projectId || 0;
+    let projectSaved = false;
+    let accumulatedResponse = '';
+    let totalLength = 0;
+    const CHUNK_SIZE = 10000; // 10k characters
+
     try {
       // Save initial session context
       await sessionManager.saveSessionContext(sessionId, {
@@ -154,62 +199,78 @@ let projectSaved = false;
       // 1. Setup temp directory
       await fs.promises.mkdir(tempBuildDir, { recursive: true });
       await fs.promises.cp(sourceTemplateDir, tempBuildDir, { recursive: true });
-      console.log(`[${buildId}] 📁 Temp directory created: ${tempBuildDir}`);
+      
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'generating',
+        message: 'Temp directory created, starting Claude generation...',
+        percentage: 5
+      });
 
       // Update session with temp directory
       await sessionManager.updateSessionContext(sessionId, { tempBuildDir });
 
-      // UPDATE SESSION CONTEXT CODE...
+      // CREATE OR UPDATE PROJECT RECORD
+      if (projectId) {
+        console.log(`[${buildId}] 🔄 Updating existing project ${projectId}...`);
+        try {
+          await messageDB.updateProject(projectId, {
+            name: `Updated Project ${buildId.substring(0, 8)}`,
+            description: `Updated: ${prompt.substring(0, 100)}...`,
+            status: 'regenerating',
+            buildId: buildId,
+            lastSessionId: sessionId,
+            framework: 'react',
+            template: 'vite-react-ts',
+            lastMessageAt: new Date(),
+            updatedAt: new Date()
+          });
+          finalProjectId = projectId;
+          projectSaved = true;
+          console.log(`[${buildId}] ✅ Updated existing project record: ${finalProjectId}`);
+        } catch (updateError) {
+          console.error(`[${buildId}] ❌ Failed to update existing project:`, updateError);
+        }
+      } else {
+        console.log(`[${buildId}] 💾 Creating new project record...`);
+        try {
+          finalProjectId = await messageDB.createProject({
+            userId,
+            name: `Generated Project ${buildId.substring(0, 8)}`,
+            description: `React project generated from prompt: ${prompt.substring(0, 100)}...`,
+            status: 'generating',
+            projectType: 'generated',
+            deploymentUrl: '',
+            downloadUrl: '',
+            zipUrl: '',
+            buildId: buildId,
+            lastSessionId: sessionId,
+            framework: 'react',
+            template: 'vite-react-ts',
+            lastMessageAt: new Date(),
+            messageCount: 0
+          });
+          projectSaved = true;
+          console.log(`[${buildId}] ✅ Created new project record: ${finalProjectId}`);
+        } catch (projectError) {
+          console.error(`[${buildId}] ❌ Failed to create project record:`, projectError);
+        }
+      }
 
-// ADD THIS ENTIRE SECTION AFTER SESSION CONTEXT UPDATE
-// CREATE OR UPDATE PROJECT RECORD
-if (projectId) {
-  console.log(`[${buildId}] 🔄 Updating existing project ${projectId}...`);
-  try {
-    await messageDB.updateProject(projectId, {
-      name: `Updated Project ${buildId.substring(0, 8)}`,
-      description: `Updated: ${prompt.substring(0, 100)}...`,
-      status: 'regenerating',
-      buildId: buildId,
-      lastSessionId: sessionId,
-      framework:  'react',
-      template: 'vite-react-ts',
-      lastMessageAt: new Date(),
-      updatedAt: new Date()
-    });
-    finalProjectId = projectId;
-    projectSaved = true;
-    console.log(`[${buildId}] ✅ Updated existing project record: ${finalProjectId}`);
-  } catch (updateError) {
-    console.error(`[${buildId}] ❌ Failed to update existing project:`, updateError);
-  }
-} else {
-  console.log(`[${buildId}] 💾 Creating new project record...`);
-  try {
-    finalProjectId = await messageDB.createProject({
-      userId,
-      name: `Generated Project ${buildId.substring(0, 8)}`,
-      description:  `React project generated from prompt: ${prompt.substring(0, 100)}...`,
-      status: 'generating',
-      projectType: 'generated',
-      deploymentUrl: '',
-      downloadUrl: '',
-      zipUrl: '',
-      buildId: buildId,
-      lastSessionId: sessionId,
-      framework: 'react',
-      template:  'vite-react-ts',
-      lastMessageAt: new Date(),
-      messageCount: 0
-    });
-    projectSaved = true;
-    console.log(`[${buildId}] ✅ Created new project record: ${finalProjectId}`);
-  } catch (projectError) {
-    console.error(`[${buildId}] ❌ Failed to create project record:`, projectError);
-  }
-}
-      console.log(`[${buildId}] 🚀 Generating frontend code...`);
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'generating',
+        message: 'Project record created, generating code with Claude...',
+        percentage: 10
+      });
+
+      console.log(`[${buildId}] 🚀 Generating frontend code with streaming...`);
       
+      // NEW: Stream with length tracking
       const frontendResult = await anthropic.messages
         .stream({
           model: "claude-sonnet-4-0",
@@ -224,27 +285,77 @@ if (projectId) {
           ],
         })
         .on("text", (text) => {
-          console.log(text);
+          accumulatedResponse += text;
+          totalLength += text.length;
+          
+          // Send length update
+          sendStreamingUpdate(res, {
+            type: 'length',
+            buildId,
+            sessionId,
+            currentLength: totalLength,
+            percentage: Math.min(10 + (totalLength / 50000) * 60, 70) // 10-70% for generation
+          });
+
+          // Send chunk update every 10k characters
+          if (totalLength > 0 && totalLength % CHUNK_SIZE === 0) {
+            const chunkStart = totalLength - CHUNK_SIZE;
+            const chunk = accumulatedResponse.substring(chunkStart, totalLength);
+            
+            sendStreamingUpdate(res, {
+              type: 'chunk',
+              buildId,
+              sessionId,
+              chunk: chunk,
+              currentLength: totalLength,
+              totalLength: totalLength
+            });
+          }
+          
+          console.log(`[${buildId}] Generated ${totalLength} characters...`);
         });
 
       const resp = await frontendResult.finalMessage();
-      console.log(`[${buildId}] ✅ Code generation completed`);
-
-      // 3. Parse generated files with enhanced parser
       const claudeResponse = (resp.content[0] as any).text;
       
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'parsing',
+        message: `Code generation completed (${totalLength} characters). Parsing files...`,
+        percentage: 70,
+        totalLength: totalLength
+      });
+
+      console.log(`[${buildId}] ✅ Code generation completed with ${totalLength} characters`);
+
+      // 3. Parse generated files with enhanced parser
       let parsedResult: ParsedResult;
       try {
         console.log(`[${buildId}] 📝 Parsing generated code with enhanced parser...`);
         parsedResult = parseFrontendCode(claudeResponse);
         console.log(`[${buildId}] ✅ Code parsing successful`);
         console.log(`[${buildId}] 📊 Parsed ${parsedResult.codeFiles.length} files`);
+        
+        sendStreamingUpdate(res, {
+          type: 'progress',
+          buildId,
+          sessionId,
+          phase: 'processing',
+          message: `Parsed ${parsedResult.codeFiles.length} files. Processing and validating...`,
+          percentage: 75
+        });
       } catch (parseError) {
         console.error(`[${buildId}] ❌ Enhanced parser failed`);
-        console.error(`[${buildId}] Parse error details:`, parseError);
-        console.error(`[${buildId}] Claude response preview:`, claudeResponse.substring(0, 500));
-        
-        throw new Error(`Failed to parse Claude response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+        sendStreamingUpdate(res, {
+          type: 'error',
+          buildId,
+          sessionId,
+          error: `Failed to parse Claude response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`
+        });
+        res.end();
+        return;
       }
 
       // 4. Process files with enhanced validation
@@ -259,83 +370,27 @@ if (projectId) {
         supabaseFiles
       } = processedProject;
 
-      // Log validation results
-      console.log(`[${buildId}] 📊 File structure validation: ${validationResult.isValid ? '✅ Valid' : '❌ Invalid'}`);
-      if (!validationResult.isValid) {
-        console.warn(`[${buildId}] ⚠️ File structure issues:`, validationResult.errors);
-      }
-
-      console.log(`[${buildId}] 🗄️ Supabase validation: ${supabaseValidation.isValid ? '✅ Valid' : '❌ Invalid'}`);
-      if (!supabaseValidation.isValid) {
-        console.warn(`[${buildId}] ⚠️ Supabase issues:`, supabaseValidation.errors);
-      }
-
-      // Log Supabase files found
-      if (supabaseFiles.allSupabaseFiles.length > 0) {
-        console.log(`[${buildId}] 🗄️ Found ${supabaseFiles.allSupabaseFiles.length} Supabase files:`);
-        console.log(`[${buildId}]   📄 Config: ${supabaseFiles.configFile ? '✅' : '❌'}`);
-        console.log(`[${buildId}]   🗃️ Migrations: ${supabaseFiles.migrationFiles.length} files`);
-        console.log(`[${buildId}]   🌱 Seed file: ${supabaseFiles.seedFile ? '✅' : '❌'}`);
-        
-        // Validate SQL syntax in migrations
-        supabaseFiles.migrationFiles.forEach((migration, index) => {
-          const hasProperSyntax = migration.content.includes('$$') && !migration.content.includes('AS $\n');
-          console.log(`[${buildId}]   🔍 Migration ${index + 1} SQL syntax: ${hasProperSyntax ? '✅' : '❌'}`);
-        });
-      } else {
-        console.log(`[${buildId}] 🗄️ No Supabase files detected in project`);
-      }
-
-      // Validate and log Tailwind config
-      if (tailwindConfig) {
-        const isValidConfig = validateTailwindConfig(tailwindConfig.content);
-        console.log(`[${buildId}] 🎨 Tailwind config validation: ${isValidConfig ? '✅ Valid' : '❌ Invalid'}`);
-        
-        if (!isValidConfig) {
-          const configContent = tailwindConfig.content;
-          const issues = [];
-          
-          if (!configContent.includes('export default')) issues.push('Missing export default');
-          if (!configContent.includes('content:')) issues.push('Missing content array');
-          if (!configContent.includes('theme:')) issues.push('Missing theme configuration');
-          if (configContent.includes('var(--')) issues.push('Contains CSS variables (not allowed)');
-          if (configContent.includes('hsl(var(')) issues.push('Contains HSL variables (not allowed)');
-          
-          console.warn(`[${buildId}] 🔍 Tailwind config issues:`, issues);
-        }
-
-        // Show config preview
-        const configLines = tailwindConfig.content.split('\n').slice(0, 10);
-        console.log(`[${buildId}] 🔍 Tailwind config preview:`, configLines.join('\n'));
-      } else {
-        console.warn(`[${buildId}] ⚠️ No tailwind.config.ts found in generated files`);
-      }
-
-      // Generate comprehensive project summary
-      const projectSummary = generateProjectSummary({
-        codeFiles: processedFiles,
-        structure: parsedResult.structure
-      });
-
-      console.log(`[${buildId}] 📊 Project Summary:`);
-      console.log(`[${buildId}]   📁 Total files: ${projectSummary.totalFiles}`);
-      console.log(`[${buildId}]   📂 File types: ${JSON.stringify(projectSummary.filesByType)}`);
-      console.log(`[${buildId}]   🏗️ Structure depth: ${projectSummary.structureDepth}`);
-      console.log(`[${buildId}]   ✅ Valid structure: ${projectSummary.hasValidStructure}`);
-
-      // Final file structure log
-      console.log(`[${buildId}] 📁 Final processed files (${processedFiles.length} total):`);
-      processedFiles.forEach((file, index) => {
-        const fileSize = file.content.length;
-        const fileSizeKB = (fileSize / 1024).toFixed(1);
-        console.log(`[${buildId}]   ${index + 1}. ${file.path} (${fileSizeKB}KB)`);
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'processing',
+        message: `Validation complete. Writing ${processedFiles.length} files to disk...`,
+        percentage: 80
       });
 
       // Use processed files instead of original parsed files
       const parsedFiles: FileData[] = processedFiles;
 
       if (!parsedFiles || parsedFiles.length === 0) {
-        throw new Error('No files generated from Claude response');
+        sendStreamingUpdate(res, {
+          type: 'error',
+          buildId,
+          sessionId,
+          error: 'No files generated from Claude response'
+        });
+        res.end();
+        return;
       }
 
       console.log(`[${buildId}] 💾 Writing ${parsedFiles.length} files...`);
@@ -352,16 +407,30 @@ if (projectId) {
           console.log(`[${buildId}] ✅ Written: ${file.path}`);
         } catch (writeError) {
           console.error(`[${buildId}] ❌ Failed to write ${file.path}:`, writeError);
-          throw new Error(`Failed to write file ${file.path}: ${writeError}`);
+          sendStreamingUpdate(res, {
+            type: 'error',
+            buildId,
+            sessionId,
+            error: `Failed to write file ${file.path}: ${writeError}`
+          });
+          res.end();
+          return;
         }
       }
 
       // Cache all files in session
       await sessionManager.cacheProjectFiles(sessionId, fileMap);
-      console.log(`[${buildId}] 📦 Cached ${Object.keys(fileMap).length} files in session`);
+      
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'deploying',
+        message: 'Files written. Creating zip and starting deployment...',
+        percentage: 85
+      });
 
-      // FIXED: Proper delay for file system operations
-      console.log(`[${buildId}] ⏳ Allowing file system operations to complete...`);
+      // Wait for file operations
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       console.log(`[${buildId}] 📦 Creating zip and uploading to Azure...`);
@@ -376,7 +445,21 @@ if (projectId) {
         zipBlobName,
         zipBuffer
       );
-      console.log(`[${buildId}] 📤 Source uploaded:`, zipUrl);
+      
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'deploying',
+        message: 'Source uploaded. Building and deploying...',
+        percentage: 90
+      });
+
+      // Generate comprehensive project summary
+      const projectSummary = generateProjectSummary({
+        codeFiles: processedFiles,
+        structure: parsedResult.structure
+      });
 
       // Update session context with enhanced project summary
       await sessionManager.updateSessionContext(sessionId, {
@@ -415,7 +498,6 @@ if (projectId) {
       });
 
       const urls = JSON.parse(DistUrl);
-      console.log(`[${buildId}] 🔗 Build URLs:`, urls);
       const builtZipUrl = urls.downloadUrl;
 
       // 7. Deploy to Azure Static Web Apps
@@ -424,9 +506,17 @@ if (projectId) {
         VITE_SUPABASE_URL: supabaseUrl,
         VITE_SUPABASE_ANON_KEY: supabaseAnonKey,
       });
-      console.log(`[${buildId}] 🌐 Deployed to:`, previewUrl);
 
-      // 8. Save assistant response to message history with enhanced data
+      sendStreamingUpdate(res, {
+        type: 'progress',
+        buildId,
+        sessionId,
+        phase: 'complete',
+        message: 'Deployment complete!',
+        percentage: 100
+      });
+
+      // 8. Save assistant response to message history
       try {
         const assistantMessageId = await messageDB.addMessage(
           JSON.stringify({
@@ -448,86 +538,60 @@ if (projectId) {
             previewUrl: previewUrl,
             downloadUrl: urls.downloadUrl,
             zipUrl: zipUrl,
-            // Use existing properties from your type definition
             fileModifications: parsedFiles.map(f => f.path),
             modificationSuccess: validationResult.isValid && supabaseValidation.isValid,
             modificationApproach: "FULL_FILE_GENERATION"
           }
         );
         console.log(`[${buildId}] 💾 Saved enhanced summary to messageDB (ID: ${assistantMessageId})`);
-        console.log(`[${buildId}] 📊 Metadata: ${parsedFiles.length} files, validation: ${validationResult.isValid && supabaseValidation.isValid}`);
       } catch (dbError) {
         console.warn(`[${buildId}] ⚠️ Failed to save summary to messageDB:`, dbError);
       }
 
-      // 9. Update Supabase database if projectId provided
-// REPLACE PROJECT UPDATE SECTION WITH ENHANCED URL MANAGER
-console.log(`[${buildId}] 💾 Using Enhanced URL Manager to save project URLs...`);
-let projectAction = projectId ? 'updated_existing' : 'created_new';
+      // 9. Update project URLs using Enhanced URL Manager
+      console.log(`[${buildId}] 💾 Using Enhanced URL Manager to save project URLs...`);
+      if (finalProjectId && projectSaved) {
+        try {
+          await urlManager.saveNewProjectUrls(
+            sessionId,
+            finalProjectId,
+            {
+              deploymentUrl: previewUrl as string,
+              downloadUrl: urls.downloadUrl,
+              zipUrl: zipUrl
+            },
+            userId,
+            {
+              name: `Generated Project ${buildId.substring(0, 8)}`,
+              description: `React project with enhanced validation`,
+              framework: 'react',
+              template: 'vite-react-ts'
+            },
+            supabaseUrl,
+            supabaseAnonKey
+          );
+          console.log(`[${buildId}] ✅ Enhanced URL Manager - Successfully updated project ${finalProjectId}`);
+        } catch (projectError) {
+          console.error(`[${buildId}] ❌ Enhanced URL Manager failed:`, projectError);
+        }
+      }
 
-if (finalProjectId && projectSaved) {
-  try {
-    console.log(`[${buildId}] 🔧 Calling Enhanced URL Manager to update project ${finalProjectId}...`);
-    
-    const updatedProjectId = await urlManager.saveNewProjectUrls(
-      sessionId,
-      finalProjectId,
-      {
-        deploymentUrl: previewUrl as string,
-        downloadUrl: urls.downloadUrl,
-        zipUrl: zipUrl
-      },
-      userId,
-      {
-        name:   `Generated Project ${buildId.substring(0, 8)}`,
-        description:   `React project with enhanced validation`,
-        framework:   'react',
-        template:  'vite-react-ts'
-      },
-      supabaseUrl,
-      supabaseAnonKey
-    );
-
-    if (updatedProjectId === finalProjectId) {
-      projectAction = projectId ? 'existing_project_updated' : 'new_project_created';
-      console.log(`[${buildId}] ✅ Enhanced URL Manager - Successfully ${projectId ? 'updated' : 'created'} project ${finalProjectId}`);
-    } else {
-      projectAction = 'project_id_mismatch';
-      console.warn(`[${buildId}] ⚠️ Enhanced URL Manager returned different project ID: ${updatedProjectId} vs ${finalProjectId}`);
-    }
-    
-  } catch (projectError) {
-    console.error(`[${buildId}] ❌ Enhanced URL Manager failed:`, projectError);
-    projectAction = 'url_manager_failed';
-    
-    // Fallback: Direct update
-    try {
-      await messageDB.updateProject(finalProjectId, {
-        deploymentUrl: previewUrl as string,
-        downloadUrl: urls.downloadUrl,
-        zipUrl: zipUrl,
-        status: 'ready',
-        updatedAt: new Date()
+      // Schedule cleanup
+      scheduleCleanup(buildId, 1);
+      
+      // Send final completion message
+      sendStreamingUpdate(res, {
+        type: 'complete',
+        buildId,
+        sessionId,
+        phase: 'complete',
+        message: 'Generation completed successfully!',
+        percentage: 100,
+        totalLength: totalLength
       });
-      projectAction = projectId ? 'existing_fallback_updated' : 'new_fallback_updated';
-      console.log(`[${buildId}] ✅ Fallback update successful for project ${finalProjectId}`);
-    } catch (fallbackError) {
-      console.error(`[${buildId}] ❌ Fallback update also failed:`, fallbackError);
-      projectAction = 'all_updates_failed';
-    }
-  }
-} else {
-  console.warn(`[${buildId}] ⚠️ No valid projectId to update URLs`);
-  projectAction = 'no_project_to_update';
-  projectSaved = false;
-}
 
-      // FIXED: Schedule cleanup for 1 hour later instead of immediate cleanup
-      scheduleCleanup(buildId, 1); // 1 hour delay
-      
-      console.log(`[${buildId}] ✅ Build process completed successfully with enhanced validation`);
-      
-      res.json({
+      // Send the final result as JSON
+      const finalResult = {
         success: true,
         files: parsedFiles,
         previewUrl: previewUrl, 
@@ -559,16 +623,32 @@ if (finalProjectId && projectSaved) {
           "Custom domains support",
           "Staging environments",
         ],
-      });
+        streamingStats: {
+          totalCharacters: totalLength,
+          chunksStreamed: Math.floor(totalLength / CHUNK_SIZE)
+        }
+      };
+
+      res.write(`data: ${JSON.stringify({
+        type: 'result',
+        buildId,
+        sessionId,
+        result: finalResult
+      })}\n\n`);
+      
+      res.end();
+      
+      console.log(`[${buildId}] ✅ Streaming build process completed successfully`);
 
     } catch (error) {
-      console.error(`[${buildId}] ❌ Build process failed:`, error);
+      console.error(`[${buildId}] ❌ Streaming build process failed:`, error);
       
-      if (error instanceof Error) {
-        console.error(`[${buildId}] Error name:`, error.name);
-        console.error(`[${buildId}] Error message:`, error.message);
-        console.error(`[${buildId}] Error stack:`, error.stack);
-      }
+      sendStreamingUpdate(res, {
+        type: 'error',
+        buildId,
+        sessionId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       
       // Save error to messageDB
       try {
@@ -589,21 +669,15 @@ if (finalProjectId && projectSaved) {
 
       // Cleanup session on error
       await sessionManager.cleanup(sessionId);
-      
-      // FIXED: Only cleanup temp directory on error, not on success
       await cleanupTempDirectory(buildId);
       
-      res.status(500).json({
-        success: false,
-        error: 'Build process failed',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        buildId: buildId,
-        sessionId: sessionId,
-      });
+      res.end();
     }
-    // REMOVED: The finally block that was causing premature cleanup
-    
-    console.log(`[${buildId}] 🏁 Generation route completed with enhanced parser`);
+  });
+
+  
+  router.post("/", async (req: Request, res: Response): Promise<void> => {
+  
   });
 
   return router;
