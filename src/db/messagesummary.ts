@@ -129,28 +129,9 @@ async updateProjectTitle(projectId: number, updateData: {
     .where(eq(projects.id, projectId))
     .limit(1);
 
-  return result[0]; // returns { aneonkey, supabaseurl } or undefined
+  return result[0]; 
 }
-async updateProject(projectId: number, updateData: {
-  name?: string;
-  description?: string;
-  conversationTitle?: string;
-  lastMessageAt?: Date;
-  updatedAt: Date;
-  [key: string]: any;
-}): Promise<void> {
-  try {
-    await this.db
-      .update(projects)
-      .set(updateData)
-      .where(eq(projects.id, projectId));
-    
-    console.log(`✅ Updated project ${projectId}`);
-  } catch (error) {
-    console.error(`Error updating project ${projectId}:`, error);
-    throw error;
-  }
-}
+
 async getProjectMessages(projectId: number, limit: number = 50): Promise<{
   success: boolean;
   data?: any[];
@@ -782,44 +763,83 @@ async getUserProjects(userId: number): Promise<any[]> {
   }
 
   // UPDATED: Create new project with user validation
-  async createProject(projectData: {
-    userId: number;
-    name: string;
-    description: string;
-    status: string;
-    projectType: string;
-    deploymentUrl: string;
-    downloadUrl: string;
-    zipUrl: string;
-    buildId: string;
-    lastSessionId: string;
-    framework: string;
-    template: string;
-    lastMessageAt: Date;
-    messageCount: number;
-  }): Promise<number> {
-    try {
-      // Ensure the user exists before creating project
-      await this.ensureUserExists(projectData.userId);
-      //@ts-ignore
-      const result = await this.db
-        .insert(projects)
-        //@ts-ignore
-        .values({
-          ...projectData,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        })
-        .returning({ id: projects.id });
-      
-      const projectId = result[0].id;
-      console.log(`✅ Created new project ${projectId} for user ${projectData.userId}`);
-      return projectId;
-    } catch (error) {
-      console.error('Error creating project:', error);
-      throw error;
-    }
+  // In your DrizzleMessageHistoryDB class, update these methods:
+
+// Update the createProject method to handle the correct field names
+// Update your DrizzleMessageHistoryDB methods to make these fields required:
+
+// Update the createProject method - make aneonkey and supabaseurl REQUIRED
+async createProject(projectData: {
+  userId: number;
+  name: string;
+  description: string;
+  status: string;
+  projectType: string;
+  deploymentUrl: string;
+  downloadUrl: string;
+  zipUrl: string;
+  buildId: string;
+  lastSessionId: string;
+  framework: string;
+  template: string;
+  lastMessageAt: Date;
+  messageCount: number;
+  supabaseurl: string;     // REQUIRED - remove the ?
+  aneonkey: string;        // REQUIRED - remove the ?
+}): Promise<number> {
+  try {
+    // Ensure the user exists before creating project
+    await this.ensureUserExists(projectData.userId);
+    
+    const result = await this.db
+      .insert(projects)
+      .values({
+        ...projectData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
+      .returning({ id: projects.id });
+    
+    const projectId = result[0].id;
+    console.log(`✅ Created new project ${projectId} for user ${projectData.userId}`);
+    return projectId;
+  } catch (error) {
+    console.error('Error creating project:', error);
+    throw error;
   }
+}
+
+// Update the updateProject method - keep these optional for updates
+async updateProject(projectId: number, updateData: {
+  name?: string;
+  description?: string;
+  conversationTitle?: string;
+  lastMessageAt?: Date;
+  updatedAt?: Date;
+  status?: string;
+  buildId?: string;
+  lastSessionId?: string;
+  framework?: string;
+  template?: string;
+  deploymentUrl?: string;
+  downloadUrl?: string;
+  zipUrl?: string;
+  supabaseurl?: string;     // Optional for updates
+  aneonkey?: string;        // Optional for updates
+  [key: string]: any;
+}): Promise<void> {
+  try {
+    await this.db
+      .update(projects)
+      .set(updateData)
+      .where(eq(projects.id, projectId));
+    
+    console.log(`✅ Updated project ${projectId}`);
+  } catch (error) {
+    console.error(`Error updating project ${projectId}:`, error);
+    throw error;
+  }
+}
 
   // Method to get project with deployment history
   async getProjectWithHistory(projectId: number): Promise<any> {

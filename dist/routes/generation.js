@@ -196,6 +196,9 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
             // Update session with temp directory
             yield sessionManager.updateSessionContext(sessionId, { tempBuildDir });
             // CREATE OR UPDATE PROJECT RECORD
+            // UPDATE PROJECT RECORD section (around line 135-150)
+            // CREATE OR UPDATE PROJECT RECORD section - Replace your existing code with this:
+            // UPDATE PROJECT RECORD section - Use the correct field names from your schema:
             if (projectId) {
                 console.log(`[${buildId}] 🔄 Updating existing project ${projectId}...`);
                 try {
@@ -208,7 +211,10 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
                         framework: 'react',
                         template: 'vite-react-ts',
                         lastMessageAt: new Date(),
-                        updatedAt: new Date()
+                        updatedAt: new Date(),
+                        // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
+                        supabaseurl: supabaseUrl, // Note: lowercase 'url'
+                        aneonkey: supabaseAnonKey // Note: 'aneonkey' not 'supabaseAnonKey'
                     });
                     finalProjectId = projectId;
                     projectSaved = true;
@@ -235,7 +241,10 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
                         framework: 'react',
                         template: 'vite-react-ts',
                         lastMessageAt: new Date(),
-                        messageCount: 0
+                        messageCount: 0,
+                        // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
+                        supabaseurl: supabaseUrl, // Note: lowercase 'url'
+                        aneonkey: supabaseAnonKey // Note: 'aneonkey' not 'supabaseAnonKey'
                     });
                     projectSaved = true;
                     console.log(`[${buildId}] ✅ Created new project record: ${finalProjectId}`);

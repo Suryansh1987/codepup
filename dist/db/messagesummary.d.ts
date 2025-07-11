@@ -50,14 +50,6 @@ export declare class DrizzleMessageHistoryDB {
         aneonkey: string;
         supabaseurl: string;
     }>;
-    updateProject(projectId: number, updateData: {
-        name?: string;
-        description?: string;
-        conversationTitle?: string;
-        lastMessageAt?: Date;
-        updatedAt: Date;
-        [key: string]: any;
-    }): Promise<void>;
     getProjectMessages(projectId: number, limit?: number): Promise<{
         success: boolean;
         data?: any[];
@@ -158,7 +150,27 @@ export declare class DrizzleMessageHistoryDB {
         template: string;
         lastMessageAt: Date;
         messageCount: number;
+        supabaseurl: string;
+        aneonkey: string;
     }): Promise<number>;
+    updateProject(projectId: number, updateData: {
+        name?: string;
+        description?: string;
+        conversationTitle?: string;
+        lastMessageAt?: Date;
+        updatedAt?: Date;
+        status?: string;
+        buildId?: string;
+        lastSessionId?: string;
+        framework?: string;
+        template?: string;
+        deploymentUrl?: string;
+        downloadUrl?: string;
+        zipUrl?: string;
+        supabaseurl?: string;
+        aneonkey?: string;
+        [key: string]: any;
+    }): Promise<void>;
     getProjectWithHistory(projectId: number): Promise<any>;
     updateProjectStatus(projectId: number, status: string): Promise<void>;
     linkSessionToProject(sessionId: string, projectId: number): Promise<void>;

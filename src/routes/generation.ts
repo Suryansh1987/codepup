@@ -29,6 +29,68 @@ interface FileData {
   content: string;
 }
 
+// Update your Project interface (wherever it's defined)
+interface Project {
+  id: number;
+  userId: number;
+  name: string;
+  description: string;
+  status: string;
+  projectType: string;
+  deploymentUrl: string;
+  downloadUrl: string;
+  zipUrl: string;
+  buildId: string;
+  lastSessionId: string;
+  framework: string;
+  template: string;
+  lastMessageAt: Date;
+  messageCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+  // ADD THESE NEW FIELDS:
+  supabaseUrl?: string;        // Optional since existing projects might not have it
+  supabaseAnonKey?: string;    // Optional since existing projects might not have it
+}
+// Update your interfaces to match the actual schema field names:
+
+interface CreateProjectInput {
+  userId: number;
+  name: string;
+  description: string;
+  status: string;
+  projectType: string;
+  deploymentUrl: string;
+  downloadUrl: string;
+  zipUrl: string;
+  buildId: string;
+  lastSessionId: string;
+  framework: string;
+  template: string;
+  lastMessageAt: Date;
+  messageCount: number;
+  // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
+  supabaseurl?: string;    // Note: lowercase 'url'
+  aneonkey?: string;       // Note: 'aneonkey' not 'supabaseAnonKey'
+}
+
+interface UpdateProjectInput {
+  name?: string;
+  description?: string;
+  status?: string;
+  buildId?: string;
+  lastSessionId?: string;
+  framework?: string;
+  template?: string;
+  lastMessageAt?: Date;
+  updatedAt?: Date;
+  deploymentUrl?: string;
+  downloadUrl?: string;
+  zipUrl?: string;
+  // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
+  supabaseurl?: string;    // Note: lowercase 'url'
+  aneonkey?: string;       // Note: 'aneonkey' not 'supabaseAnonKey'
+}
 interface StreamingProgressData {
   type: 'progress' | 'length' | 'chunk' | 'complete' | 'error';
   buildId: string;
@@ -213,51 +275,62 @@ export function initializeGenerationRoutes(
       await sessionManager.updateSessionContext(sessionId, { tempBuildDir });
 
       // CREATE OR UPDATE PROJECT RECORD
-      if (projectId) {
-        console.log(`[${buildId}] 🔄 Updating existing project ${projectId}...`);
-        try {
-          await messageDB.updateProject(projectId, {
-            name: `Updated Project ${buildId.substring(0, 8)}`,
-            description: `Updated: ${prompt.substring(0, 100)}...`,
-            status: 'regenerating',
-            buildId: buildId,
-            lastSessionId: sessionId,
-            framework: 'react',
-            template: 'vite-react-ts',
-            lastMessageAt: new Date(),
-            updatedAt: new Date()
-          });
-          finalProjectId = projectId;
-          projectSaved = true;
-          console.log(`[${buildId}] ✅ Updated existing project record: ${finalProjectId}`);
-        } catch (updateError) {
-          console.error(`[${buildId}] ❌ Failed to update existing project:`, updateError);
-        }
-      } else {
-        console.log(`[${buildId}] 💾 Creating new project record...`);
-        try {
-          finalProjectId = await messageDB.createProject({
-            userId,
-            name: `Generated Project ${buildId.substring(0, 8)}`,
-            description: `React project generated from prompt: ${prompt.substring(0, 100)}...`,
-            status: 'generating',
-            projectType: 'generated',
-            deploymentUrl: '',
-            downloadUrl: '',
-            zipUrl: '',
-            buildId: buildId,
-            lastSessionId: sessionId,
-            framework: 'react',
-            template: 'vite-react-ts',
-            lastMessageAt: new Date(),
-            messageCount: 0
-          });
-          projectSaved = true;
-          console.log(`[${buildId}] ✅ Created new project record: ${finalProjectId}`);
-        } catch (projectError) {
-          console.error(`[${buildId}] ❌ Failed to create project record:`, projectError);
-        }
-      }
+      // UPDATE PROJECT RECORD section (around line 135-150)
+// CREATE OR UPDATE PROJECT RECORD section - Replace your existing code with this:
+
+// UPDATE PROJECT RECORD section - Use the correct field names from your schema:
+
+if (projectId) {
+  console.log(`[${buildId}] 🔄 Updating existing project ${projectId}...`);
+  try {
+    await messageDB.updateProject(projectId, {
+      name: `Updated Project ${buildId.substring(0, 8)}`,
+      description: `Updated: ${prompt.substring(0, 100)}...`,
+      status: 'regenerating',
+      buildId: buildId,
+      lastSessionId: sessionId,
+      framework: 'react',
+      template: 'vite-react-ts',
+      lastMessageAt: new Date(),
+      updatedAt: new Date(),
+      // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
+      supabaseurl: supabaseUrl,        // Note: lowercase 'url'
+      aneonkey: supabaseAnonKey        // Note: 'aneonkey' not 'supabaseAnonKey'
+    });
+    finalProjectId = projectId;
+    projectSaved = true;
+    console.log(`[${buildId}] ✅ Updated existing project record: ${finalProjectId}`);
+  } catch (updateError) {
+    console.error(`[${buildId}] ❌ Failed to update existing project:`, updateError);
+  }
+} else {
+  console.log(`[${buildId}] 💾 Creating new project record...`);
+  try {
+    finalProjectId = await messageDB.createProject({
+      userId,
+      name: `Generated Project ${buildId.substring(0, 8)}`,
+      description: `React project generated from prompt: ${prompt.substring(0, 100)}...`,
+      status: 'generating',
+      projectType: 'generated',
+      deploymentUrl: '',
+      downloadUrl: '',
+      zipUrl: '',
+      buildId: buildId,
+      lastSessionId: sessionId,
+      framework: 'react',
+      template: 'vite-react-ts',
+      lastMessageAt: new Date(),
+      messageCount: 0,
+      // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
+      supabaseurl: supabaseUrl,        // Note: lowercase 'url'
+      aneonkey: supabaseAnonKey        // Note: 'aneonkey' not 'supabaseAnonKey'
+    });
+    projectSaved = true;
+    console.log(`[${buildId}] ✅ Created new project record: ${finalProjectId}`);
+  } catch (projectError) {
+    console.error(`[${buildId}] ❌ Failed to create project record:`, projectError);
+  }
+}
 
       sendStreamingUpdate(res, {
         type: 'progress',

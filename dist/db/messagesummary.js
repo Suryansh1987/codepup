@@ -74,22 +74,7 @@ class DrizzleMessageHistoryDB {
                 .from(message_schema_1.projects)
                 .where((0, drizzle_orm_1.eq)(message_schema_1.projects.id, projectId))
                 .limit(1);
-            return result[0]; // returns { aneonkey, supabaseurl } or undefined
-        });
-    }
-    updateProject(projectId, updateData) {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                yield this.db
-                    .update(message_schema_1.projects)
-                    .set(updateData)
-                    .where((0, drizzle_orm_1.eq)(message_schema_1.projects.id, projectId));
-                console.log(`✅ Updated project ${projectId}`);
-            }
-            catch (error) {
-                console.error(`Error updating project ${projectId}:`, error);
-                throw error;
-            }
+            return result[0];
         });
     }
     getProjectMessages(projectId_1) {
@@ -622,15 +607,17 @@ class DrizzleMessageHistoryDB {
         });
     }
     // UPDATED: Create new project with user validation
+    // In your DrizzleMessageHistoryDB class, update these methods:
+    // Update the createProject method to handle the correct field names
+    // Update your DrizzleMessageHistoryDB methods to make these fields required:
+    // Update the createProject method - make aneonkey and supabaseurl REQUIRED
     createProject(projectData) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Ensure the user exists before creating project
                 yield this.ensureUserExists(projectData.userId);
-                //@ts-ignore
                 const result = yield this.db
                     .insert(message_schema_1.projects)
-                    //@ts-ignore
                     .values(Object.assign(Object.assign({}, projectData), { createdAt: new Date(), updatedAt: new Date() }))
                     .returning({ id: message_schema_1.projects.id });
                 const projectId = result[0].id;
@@ -639,6 +626,22 @@ class DrizzleMessageHistoryDB {
             }
             catch (error) {
                 console.error('Error creating project:', error);
+                throw error;
+            }
+        });
+    }
+    // Update the updateProject method - keep these optional for updates
+    updateProject(projectId, updateData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield this.db
+                    .update(message_schema_1.projects)
+                    .set(updateData)
+                    .where((0, drizzle_orm_1.eq)(message_schema_1.projects.id, projectId));
+                console.log(`✅ Updated project ${projectId}`);
+            }
+            catch (error) {
+                console.error(`Error updating project ${projectId}:`, error);
                 throw error;
             }
         });

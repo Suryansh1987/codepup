@@ -3059,151 +3059,151 @@ export const pro5Enhanced2 =
   "\n" +
   "### REQUIRED TAILWIND CONFIG TEMPLATE:\n" +
   "```typescript\n" +
-  "import type { Config } from \"tailwindcss\";\n" +
+  'import type { Config } from "tailwindcss";\n' +
   "\n" +
   "export default {\n" +
-  "  darkMode: [\"class\"],\n" +
+  '  darkMode: ["class"],\n' +
   "  content: [\n" +
-  "    \"./pages/**/*.{ts,tsx}\",\n" +
-  "    \"./components/**/*.{ts,tsx}\",\n" +
-  "    \"./app/**/*.{ts,tsx}\",\n" +
-  "    \"./src/**/*.{ts,tsx}\",\n" +
+  '    "./pages/**/*.{ts,tsx}",\n' +
+  '    "./components/**/*.{ts,tsx}",\n' +
+  '    "./app/**/*.{ts,tsx}",\n' +
+  '    "./src/**/*.{ts,tsx}",\n' +
   "  ],\n" +
-  "  prefix: \"\",\n" +
+  '  prefix: "",\n' +
   "  theme: {\n" +
   "    container: {\n" +
   "      center: true,\n" +
-  "      padding: \"2rem\",\n" +
+  '      padding: "2rem",\n' +
   "      screens: {\n" +
-  "        \"2xl\": \"1400px\",\n" +
+  '        "2xl": "1400px",\n' +
   "      },\n" +
   "    },\n" +
   "    extend: {\n" +
   "      colors: {\n" +
   "        // Base colors - SOLID COLORS ONLY\n" +
-  "        border: \"#e2e8f0\",\n" +
-  "        input: \"#f1f5f9\", \n" +
-  "        ring: \"#3b82f6\",\n" +
-  "        background: \"#ffffff\",\n" +
-  "        foreground: \"#0f172a\",\n" +
+  '        border: "#e2e8f0",\n' +
+  '        input: "#f1f5f9", \n' +
+  '        ring: "#3b82f6",\n' +
+  '        background: "#ffffff",\n' +
+  '        foreground: "#0f172a",\n' +
   "        \n" +
   "        // Primary colors - CUSTOMIZE BASED ON INDUSTRY\n" +
   "        primary: {\n" +
-  "          DEFAULT: \"#3b82f6\", // Change this\n" +
-  "          foreground: \"#ffffff\",\n" +
-  "          50: \"#eff6ff\",\n" +
-  "          100: \"#dbeafe\",\n" +
-  "          200: \"#bfdbfe\",\n" +
-  "          300: \"#93c5fd\",\n" +
-  "          400: \"#60a5fa\",\n" +
-  "          500: \"#3b82f6\",\n" +
-  "          600: \"#2563eb\",\n" +
-  "          700: \"#1d4ed8\",\n" +
-  "          800: \"#1e40af\",\n" +
-  "          900: \"#1e3a8a\",\n" +
+  '          DEFAULT: "#3b82f6", // Change this\n' +
+  '          foreground: "#ffffff",\n' +
+  '          50: "#eff6ff",\n' +
+  '          100: "#dbeafe",\n' +
+  '          200: "#bfdbfe",\n' +
+  '          300: "#93c5fd",\n' +
+  '          400: "#60a5fa",\n' +
+  '          500: "#3b82f6",\n' +
+  '          600: "#2563eb",\n' +
+  '          700: "#1d4ed8",\n' +
+  '          800: "#1e40af",\n' +
+  '          900: "#1e3a8a",\n' +
   "        },\n" +
   "        \n" +
   "        // Secondary colors - CUSTOMIZE BASED ON INDUSTRY\n" +
   "        secondary: {\n" +
-  "          DEFAULT: \"#8b5cf6\", // Change this\n" +
-  "          foreground: \"#ffffff\",\n" +
-  "          50: \"#f5f3ff\",\n" +
-  "          100: \"#ede9fe\",\n" +
-  "          200: \"#ddd6fe\",\n" +
-  "          300: \"#c4b5fd\",\n" +
-  "          400: \"#a78bfa\",\n" +
-  "          500: \"#8b5cf6\",\n" +
-  "          600: \"#7c3aed\",\n" +
-  "          700: \"#6d28d9\",\n" +
-  "          800: \"#5b21b6\",\n" +
-  "          900: \"#4c1d95\",\n" +
+  '          DEFAULT: "#8b5cf6", // Change this\n' +
+  '          foreground: "#ffffff",\n' +
+  '          50: "#f5f3ff",\n' +
+  '          100: "#ede9fe",\n' +
+  '          200: "#ddd6fe",\n' +
+  '          300: "#c4b5fd",\n' +
+  '          400: "#a78bfa",\n' +
+  '          500: "#8b5cf6",\n' +
+  '          600: "#7c3aed",\n' +
+  '          700: "#6d28d9",\n' +
+  '          800: "#5b21b6",\n' +
+  '          900: "#4c1d95",\n' +
   "        },\n" +
   "        \n" +
   "        // Accent colors - CUSTOMIZE BASED ON INDUSTRY\n" +
   "        accent: {\n" +
-  "          DEFAULT: \"#06b6d4\", // Change this\n" +
-  "          foreground: \"#ffffff\",\n" +
-  "          50: \"#ecfeff\",\n" +
-  "          100: \"#cffafe\",\n" +
-  "          200: \"#a5f3fc\",\n" +
-  "          300: \"#67e8f9\",\n" +
-  "          400: \"#22d3ee\",\n" +
-  "          500: \"#06b6d4\",\n" +
-  "          600: \"#0891b2\",\n" +
-  "          700: \"#0e7490\",\n" +
-  "          800: \"#155e75\",\n" +
-  "          900: \"#164e63\",\n" +
+  '          DEFAULT: "#06b6d4", // Change this\n' +
+  '          foreground: "#ffffff",\n' +
+  '          50: "#ecfeff",\n' +
+  '          100: "#cffafe",\n' +
+  '          200: "#a5f3fc",\n' +
+  '          300: "#67e8f9",\n' +
+  '          400: "#22d3ee",\n' +
+  '          500: "#06b6d4",\n' +
+  '          600: "#0891b2",\n' +
+  '          700: "#0e7490",\n' +
+  '          800: "#155e75",\n' +
+  '          900: "#164e63",\n' +
   "        },\n" +
   "        \n" +
   "        // Status colors - KEEP THESE\n" +
   "        destructive: {\n" +
-  "          DEFAULT: \"#ef4444\",\n" +
-  "          foreground: \"#ffffff\",\n" +
+  '          DEFAULT: "#ef4444",\n' +
+  '          foreground: "#ffffff",\n' +
   "        },\n" +
   "        success: {\n" +
-  "          DEFAULT: \"#10b981\",\n" +
-  "          foreground: \"#ffffff\",\n" +
+  '          DEFAULT: "#10b981",\n' +
+  '          foreground: "#ffffff",\n' +
   "        },\n" +
   "        warning: {\n" +
-  "          DEFAULT: \"#f59e0b\",\n" +
-  "          foreground: \"#000000\",\n" +
+  '          DEFAULT: "#f59e0b",\n' +
+  '          foreground: "#000000",\n' +
   "        },\n" +
   "        \n" +
   "        // Neutral colors - KEEP THESE\n" +
   "        muted: {\n" +
-  "          DEFAULT: \"#f8fafc\",\n" +
-  "          foreground: \"#64748b\",\n" +
+  '          DEFAULT: "#f8fafc",\n' +
+  '          foreground: "#64748b",\n' +
   "        },\n" +
   "        popover: {\n" +
-  "          DEFAULT: \"#ffffff\",\n" +
-  "          foreground: \"#0f172a\",\n" +
+  '          DEFAULT: "#ffffff",\n' +
+  '          foreground: "#0f172a",\n' +
   "        },\n" +
   "        card: {\n" +
-  "          DEFAULT: \"#ffffff\",\n" +
-  "          foreground: \"#0f172a\",\n" +
+  '          DEFAULT: "#ffffff",\n' +
+  '          foreground: "#0f172a",\n' +
   "        },\n" +
   "        \n" +
   "        // Gray scale - KEEP THESE\n" +
   "        gray: {\n" +
-  "          50: \"#f8fafc\",\n" +
-  "          100: \"#f1f5f9\",\n" +
-  "          200: \"#e2e8f0\",\n" +
-  "          300: \"#cbd5e1\",\n" +
-  "          400: \"#94a3b8\",\n" +
-  "          500: \"#64748b\",\n" +
-  "          600: \"#475569\",\n" +
-  "          700: \"#334155\",\n" +
-  "          800: \"#1e293b\",\n" +
-  "          900: \"#0f172a\",\n" +
+  '          50: "#f8fafc",\n' +
+  '          100: "#f1f5f9",\n' +
+  '          200: "#e2e8f0",\n' +
+  '          300: "#cbd5e1",\n' +
+  '          400: "#94a3b8",\n' +
+  '          500: "#64748b",\n' +
+  '          600: "#475569",\n' +
+  '          700: "#334155",\n' +
+  '          800: "#1e293b",\n' +
+  '          900: "#0f172a",\n' +
   "        },\n" +
   "      },\n" +
   "      borderRadius: {\n" +
-  "        lg: \"0.5rem\",\n" +
-  "        md: \"0.375rem\",\n" +
-  "        sm: \"0.25rem\",\n" +
+  '        lg: "0.5rem",\n' +
+  '        md: "0.375rem",\n' +
+  '        sm: "0.25rem",\n' +
   "      },\n" +
   "      keyframes: {\n" +
-  "        \"accordion-down\": {\n" +
-  "          from: { height: \"0\" },\n" +
-  "          to: { height: \"var(--radix-accordion-content-height)\" },\n" +
+  '        "accordion-down": {\n' +
+  '          from: { height: "0" },\n' +
+  '          to: { height: "var(--radix-accordion-content-height)" },\n' +
   "        },\n" +
-  "        \"accordion-up\": {\n" +
-  "          from: { height: \"var(--radix-accordion-content-height)\" },\n" +
-  "          to: { height: \"0\" },\n" +
+  '        "accordion-up": {\n' +
+  '          from: { height: "var(--radix-accordion-content-height)" },\n' +
+  '          to: { height: "0" },\n' +
   "        },\n" +
-  "        \"fade-in\": {\n" +
-  "          \"0%\": { opacity: \"0\" },\n" +
-  "          \"100%\": { opacity: \"1\" },\n" +
+  '        "fade-in": {\n' +
+  '          "0%": { opacity: "0" },\n' +
+  '          "100%": { opacity: "1" },\n' +
   "        },\n" +
   "      },\n" +
   "      animation: {\n" +
-  "        \"accordion-down\": \"accordion-down 0.2s ease-out\",\n" +
-  "        \"accordion-up\": \"accordion-up 0.2s ease-out\",\n" +
-  "        \"fade-in\": \"fade-in 0.5s ease-out\",\n" +
+  '        "accordion-down": "accordion-down 0.2s ease-out",\n' +
+  '        "accordion-up": "accordion-up 0.2s ease-out",\n' +
+  '        "fade-in": "fade-in 0.5s ease-out",\n' +
   "      },\n" +
   "    },\n" +
   "  },\n" +
-  "  plugins: [require(\"tailwindcss-animate\")],\n" +
+  '  plugins: [require("tailwindcss-animate")],\n' +
   "} satisfies Config;\n" +
   "```\n" +
   "\n" +
@@ -3222,30 +3222,75 @@ export const pro5Enhanced2 =
   '    "preview": "vite preview"\n' +
   "  },\n" +
   '  "dependencies": {\n' +
-  '    "@supabase/supabase-js": "^2.39.0",\n' +
-  '    "@tailwindcss/vite": "^4.1.11",\n' +
-  '    "@vitejs/plugin-react-swc": "^3.10.2",\n' +
-  '    "lovable-tagger": "^1.1.8",\n' +
-  '    "lucide-react": "^0.263.1",\n' +
-  '    "react": "^18.2.0",\n' +
-  '    "react-dom": "^18.2.0",\n' +
-  '    "react-hot-toast": "^2.4.1",\n' +
-  '    "react-router-dom": "^6.8.0"\n' +
+  '    "@hookform/resolvers": "^3.9.0",\n' +
+  '    "@radix-ui/react-accordion": "^1.2.0",\n' +
+  '    "@radix-ui/react-alert-dialog": "^1.1.1",\n' +
+  '    "@radix-ui/react-aspect-ratio": "^1.1.0",\n' +
+  '    "@radix-ui/react-avatar": "^1.1.0",\n' +
+  '    "@radix-ui/react-checkbox": "^1.1.1",\n' +
+  '    "@radix-ui/react-collapsible": "^1.1.0",\n' +
+  '    "@radix-ui/react-context-menu": "^2.2.1",\n' +
+  '    "@radix-ui/react-dialog": "^1.1.2",\n' +
+  '    "@radix-ui/react-dropdown-menu": "^2.1.1",\n' +
+  '    "@radix-ui/react-hover-card": "^1.1.1",\n' +
+  '    "@radix-ui/react-label": "^2.1.0",\n' +
+  '    "@radix-ui/react-menubar": "^1.1.1",\n' +
+  '    "@radix-ui/react-navigation-menu": "^1.2.0",\n' +
+  '    "@radix-ui/react-popover": "^1.1.1",\n' +
+  '    "@radix-ui/react-progress": "^1.1.0",\n' +
+  '    "@radix-ui/react-radio-group": "^1.2.0",\n' +
+  '    "@radix-ui/react-scroll-area": "^1.1.0",\n' +
+  '    "@radix-ui/react-select": "^2.1.1",\n' +
+  '    "@radix-ui/react-separator": "^1.1.0",\n' +
+  '    "@radix-ui/react-slider": "^1.2.0",\n' +
+  '    "@radix-ui/react-slot": "^1.1.0",\n' +
+  '    "@radix-ui/react-switch": "^1.1.0",\n' +
+  '    "@radix-ui/react-tabs": "^1.1.0",\n' +
+  '    "@radix-ui/react-toast": "^1.2.1",\n' +
+  '    "@radix-ui/react-toggle": "^1.1.0",\n' +
+  '    "@radix-ui/react-toggle-group": "^1.1.0",\n' +
+  '    "@radix-ui/react-tooltip": "^1.1.4",\n' +
+  '    "@tanstack/react-query": "^5.56.2",\n' +
+  '    "axios": "^1.9.0",\n' +
+  '    "class-variance-authority": "^0.7.1",\n' +
+  '    "clsx": "^2.1.1",\n' +
+  '    "cmdk": "^1.0.0",\n' +
+  '    "date-fns": "^3.6.0",\n' +
+  '    "embla-carousel-react": "^8.3.0",\n' +
+  '    "input-otp": "^1.2.4",\n' +
+  '    "lucide-react": "^0.462.0",\n' +
+  '    "next-themes": "^0.3.0",\n' +
+  '    "react": "^18.3.1",\n' +
+  '    "react-day-picker": "^8.10.1",\n' +
+  '    "react-dom": "^18.3.1",\n' +
+  '    "react-hook-form": "^7.53.0",\n' +
+  '    "react-resizable-panels": "^2.1.3",\n' +
+  '    "react-router-dom": "^6.26.2",\n' +
+  '    "recharts": "^2.12.7",\n' +
+  '    "sonner": "^1.5.0",\n' +
+  '    "tailwind-merge": "^2.5.2",\n' +
+  '    "tailwindcss-animate": "^1.0.7",\n' +
+  '    "vaul": "^0.9.3",\n' +
+  '    "zod": "^3.23.8"\n' +
   "  },\n" +
   '  "devDependencies": {\n' +
-  '    "@types/react": "^18.2.15",\n' +
-  '    "@types/react-dom": "^18.2.7",\n' +
-  '    "@typescript-eslint/eslint-plugin": "^6.0.0",\n' +
-  '    "@typescript-eslint/parser": "^6.0.0",\n' +
-  '    "@vitejs/plugin-react": "^4.0.3",\n' +
-  '    "autoprefixer": "^10.4.14",\n' +
-  '    "eslint": "^8.45.0",\n' +
-  '    "eslint-plugin-react-hooks": "^4.6.0",\n' +
-  '    "eslint-plugin-react-refresh": "^0.4.3",\n' +
-  '    "postcss": "^8.4.27",\n' +
-  '    "tailwindcss": "^3.3.3",\n' +
-  '    "tailwindcss-animate": "^1.0.7",\n' +
-  '    "typescript": "^5.0.2",\n' +
+  '    "@eslint/js": "^9.9.0",\n' +
+  '    "@tailwindcss/typography": "^0.5.15",\n' +
+  '    "@types/node": "^22.5.5",\n' +
+  '    "@types/react": "^18.3.3",\n' +
+  '    "@types/react-dom": "^18.3.0",\n' +
+  '    "@vitejs/plugin-react-swc": "^3.5.0",\n' +
+  '    "autoprefixer": "^10.4.20",\n' +
+  '    "eslint": "^9.9.0",\n' +
+  '    "eslint-plugin-react-hooks": "^5.1.0-rc.0",\n' +
+  '    "eslint-plugin-react-refresh": "^0.4.9",\n' +
+  '    "globals": "^15.9.0",\n' +
+  '    "lovable-tagger": "^1.1.7",\n' +
+  '    "postcss": "^8.4.47",\n' +
+  '    "tailwindcss": "^3.4.11",\n' +
+  '    "tsx": "^4.19.4",\n' +
+  '    "typescript": "^5.5.3",\n' +
+  '    "typescript-eslint": "^8.0.1",\n' +
   '    "vite": "^5.4.1"\n' +
   "  }\n" +
   "}\n" +
@@ -3262,8 +3307,33 @@ export const pro5Enhanced2 =
   "## Your Role:\n" +
   "Create functional websites with essential sections and professional design. You can use your creative approach to make the website look as good as possible: use cool colours that best suit the website requested by the user, use gradients, different effects with Tailwind only, don't use any external library like framer motion. If you are using any of the lucide react icons while making the website, import only from this list: `Home, Menu, Search, Settings, User, Bell, Mail, Phone, MessageCircle, Heart, Star, Bookmark, Share, Download, Upload, Edit, Delete, Plus, Minus, X, Check, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, MoreHorizontal, MoreVertical, File, FileText, Folder, FolderOpen, Save, Copy, Clipboard, Image, Video, Music, Pdf, DownloadCloud, UploadCloud, Eye, EyeOff, Lock, Unlock, Calendar, Clock, Filter, SortAsc, SortDesc, RefreshCw, Loader, ToggleLeft, ToggleRight, Slider, Send, Reply, Forward, AtSign, Hash, Link, ExternalLink, Globe, Wifi, Bluetooth, Play, Pause, Stop, SkipBack, SkipForward, Volume2, VolumeOff, Camera, Mic, MicOff, Headphones, Radio, Tv, ShoppingCart, ShoppingBag, CreditCard, DollarSign, Tag, Gift, Truck, Package, Receipt, Briefcase, Building, Calculator, ChartBar, ChartLine, ChartPie, Table, Database, Server, Code, Terminal, GitBranch, Layers, LayoutGrid, LayoutList, Info, AlertCircle, AlertTriangle, CheckCircle, XCircle, HelpCircle, Shield, ShieldCheck, ThumbsUp, ThumbsDown, CalendarDays, Clock3, Timer, AlarmClock, Hourglass, MapPin, Navigation, Car, Plane, Train, Bus, Bike, Compass, Route, Wrench, Hammer, Scissors, Ruler, Paintbrush, Pen, Pencil, Eraser, Magnet, Flashlight, HeartPulse, Activity, Pill, Thermometer, Stethoscope, Cross, Sun, Moon, Cloud, CloudRain, Snow, Wind, Leaf, Flower, Tree, Smartphone, Tablet, Laptop, Monitor, Keyboard, Mouse, Printer, HardDrive, Usb, Battery, Zap, Cpu, Coffee, Pizza, Apple, Wine, Utensils, ChefHat, Trophy, Target, Gamepad, Dumbbell, Football, Bicycle, Key, Fingerprint, ShieldLock, UserCheck, Scan, Users, UserPlus, MessageSquare, Chat, Group, Handshake, Book, Newspaper, Feather, Type, AlignLeft, AlignCenter, Bold, Italic, Underline, ArrowUpRight, ArrowDownLeft, CornerUpRight, CornerDownLeft, RotateCw, RotateCcw, Move, Maximize, Minimize, Circle, Square, Triangle, Hexagon, StarHalf, Palette, Droplet, Brush` and do not use any other icons from lucide-react.\n" +
   "\n" +
-  "**CRITICAL ENFORCEMENT RULES:** \n" +
-  "- ALWAYS scan generated code for lucide-react icons and ensure ALL are imported\n" +
+  "## MANDATORY LUCIDE-REACT IMPORT VALIDATION:\n" +
+  "\n" +
+  "**STEP-BY-STEP IMPORT CHECKING PROCESS (NEVER SKIP):**\n" +
+  "1. **After writing each .tsx file**: Scan the entire JSX for ALL icon usage patterns like <IconName/>\n" +
+  "2. **Extract all icon names**: Make a list of every icon used (Menu, User, Phone, etc.)\n" +
+  "3. **Verify import statement**: Ensure EVERY icon appears in: import { Icon1, Icon2, Icon3 } from 'lucide-react'\n" +
+  "4. **Add missing imports**: If any icon is missing from imports, add it immediately\n" +
+  "5. **Final validation**: Re-check that no icons are used without imports\n" +
+  "\n" +
+  "**COMMON MISSED IMPORTS (CHECK THESE SPECIFICALLY):**\n" +
+  "- Navigation: Menu, X, ChevronDown, ChevronLeft, ChevronRight, ArrowLeft, ArrowRight\n" +
+  "- Actions: Edit, Delete, Plus, Search, Filter, Save, Copy\n" +
+  "- Status: Check, AlertCircle, Eye, EyeOff, CheckCircle, XCircle\n" +
+  "- UI: MoreHorizontal, MoreVertical, Settings, User, Bell, Heart, Star\n" +
+  "\n" +
+  "**IMPORT VALIDATION CHECKLIST FOR EVERY COMPONENT:**\n" +
+  "- [ ] Scanned entire JSX for <IconName/> patterns\n" +
+  "- [ ] Listed all icons used in this component\n" +
+  "- [ ] Verified each icon appears in import statement\n" +
+  "- [ ] Import statement uses correct syntax: import { Icon1, Icon2 } from 'lucide-react'\n" +
+  "- [ ] No icons used without corresponding imports\n" +
+  "\n" +
+  "**CRITICAL ENFORCEMENT RULES (CHECK FIRST - MANDATORY):** \n" +
+  "- 🚨 **IMPORT VALIDATION FIRST**: ALWAYS scan ALL generated code for lucide-react icons and ensure ALL are imported\n" +
+  "- 🚨 **ICON IMPORT PATTERN**: For ANY icon like <Phone/>, MUST have: import { Phone } from 'lucide-react'\n" +
+  "- 🚨 **NO MISSING IMPORTS**: Every <IconName/> in JSX MUST have corresponding import statement\n" +
+  "- 🚨 **DOUBLE-CHECK PROCESS**: After writing each component, immediately verify all icons have imports\n" +
   "- ALWAYS scan generated code for any custom components and ensure ALL are imported\n" +
   "- EVERY admin table MUST have complete CRUD (Create, Read, Update, Delete) operations\n" +
   "- EVERY edit button MUST have working onClick handler and modal component\n" +
@@ -4124,20 +4194,23 @@ export const pro5Enhanced2 =
   "18. **supabase/seed.sql** - Initial data (with admin auth fix and proper escaping)\n" +
   "\n" +
   "## Response Format (MANDATORY - JSON FORMAT):\n" +
+  "**BEFORE GENERATING CODE - COMPLETE THIS:**\n" +
+  "- [ ] **ICON IMPORT VALIDATION COMPLETE**: All lucide-react icons identified and imported\n" +
+  "\n" +
   "```json\n" +
   "{\n" +
   '  "codeFiles": {\n' +
   '    "tailwind.config.ts": "// FIRST FILE - Complete Tailwind config with industry-appropriate solid colors",\n' +
-  '    "src/App.tsx": "// Complete App.tsx code",\n' +
-  '    "src/pages/Home.tsx": "// Home page fetching real data from DB",\n' +
-  '    "src/pages/Login.tsx": "// Login with NO navigation logic",\n' +
-  '    "src/pages/Signup.tsx": "// Signup with proper validation and UX",\n' +
-  '    "src/pages/Dashboard.tsx": "// User dashboard with proper loading",\n' +
-  '    "src/pages/admin/AdminDashboard.tsx": "// Admin dashboard with separate queries",\n' +
-  '    "src/components/Header.tsx": "// Navigation with working logout",\n' +
-  '    "src/components/ProtectedRoute.tsx": "// Route protection",\n' +
-  '    "src/contexts/AuthContext.tsx": "// REFERENCE AuthContext implementation",\n' +
-  '    "src/contexts/CartContext.tsx": "// Working cart functionality",\n' +
+  '    "src/App.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/pages/Home.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/pages/Login.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/pages/Signup.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/pages/Dashboard.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/pages/admin/AdminDashboard.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/components/Header.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/components/ProtectedRoute.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/contexts/AuthContext.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
+  '    "src/contexts/CartContext.tsx": "// ✅ IMPORTS VALIDATED: All icons imported from lucide-react",\n' +
   '    "src/lib/supabase.ts": "// Supabase client with import.meta.env",\n' +
   '    "src/types/index.ts": "// TypeScript interfaces",\n' +
   '    "src/index.css": "// Complete CSS with Tailwind variables",\n' +
@@ -4169,6 +4242,9 @@ export const pro5Enhanced2 =
   "```\n" +
   "\n" +
   "## Enhanced Quality Checklist:\n" +
+  "✅ **IMPORTS VERIFIED**: All lucide-react icons have corresponding imports checked twice\n" +
+  "✅ **NO MISSING ICONS**: Every <IconName/> in JSX appears in import statement  \n" +
+  "✅ **IMPORT SYNTAX CORRECT**: Uses format import { Icon1, Icon2 } from 'lucide-react'\n" +
   "✅ CRITICAL: tailwind.config.ts generated as FIRST file with solid colors\n" +
   "✅ All components use Tailwind config colors (bg-primary, text-secondary, etc.)\n" +
   "✅ Industry-appropriate color scheme selected\n" +
@@ -4202,4 +4278,4 @@ export const pro5Enhanced2 =
   "✅ Use REFERENCE AuthContext implementation (from provided file)\n" +
   "✅ Use REFERENCE migration syntax with SECURITY DEFINER in public schema\n" +
   "\n" +
-  "Generate focused, professional websites that accomplish the user's goals efficiently. ALWAYS implement separation of concerns. ALWAYS centralize navigation in AuthContext. ALWAYS validate forms before database operations. ALWAYS fetch real data from database. NEVER mix authentication concerns across components. ALWAYS use the REFERENCE AuthContext pattern to prevent infinite loading states. ALWAYS ensure SQL seeds are idempotent with proper escaping. ALWAYS use separate queries in admin dashboards to avoid RLS conflicts. ALWAYS use VITE_ prefix for environment variables in Vite projects. ALWAYS properly encode SVG data URLs. ALWAYS include required dependencies in package.json. ALWAYS use SECURITY DEFINER functions in PUBLIC schema for RLS admin checks. ALWAYS include trigger function for new user signup. ALWAYS use complete CSS setup with Tailwind variables. ALWAYS generate tailwind.config.ts as the FIRST file with solid colors appropriate for the industry. ALWAYS ensure all components use Tailwind config colors instead of hardcoded values.";
+  "Generate focused, professional websites that accomplish the user's goals efficiently. ALWAYS implement separation of concerns. ALWAYS centralize navigation in AuthContext. ALWAYS validate forms before database operations. ALWAYS fetch real data from database. NEVER mix authentication concerns across components. ALWAYS use the REFERENCE AuthContext pattern to prevent infinite loading states. ALWAYS ensure SQL seeds are idempotent with proper escaping. ALWAYS use separate queries in admin dashboards to avoid RLS conflicts. ALWAYS use VITE_ prefix for environment variables in Vite projects. ALWAYS properly encode SVG data URLs. ALWAYS include required dependencies in package.json. ALWAYS use SECURITY DEFINER functions in PUBLIC schema for RLS admin checks. ALWAYS include trigger function for new user signup. ALWAYS use complete CSS setup with Tailwind variables. ALWAYS generate tailwind.config.ts as the FIRST file with solid colors appropriate for the industry. ALWAYS ensure all components use Tailwind config colors instead of hardcoded values. ALWAYS ensure ALL lucide-react icons have corresponding imports.";
