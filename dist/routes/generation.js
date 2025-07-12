@@ -74,22 +74,18 @@ function cleanupTempDirectory(buildId) {
         }
     });
 }
-// ADD THIS ENTIRE FUNCTION
 function resolveUserId(messageDB, providedUserId, sessionId) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Priority 1: Use provided userId if valid
             if (providedUserId && (yield messageDB.validateUserExists(providedUserId))) {
                 return providedUserId;
             }
-            // Priority 2: Get userId from session's most recent project
             if (sessionId) {
                 const sessionProject = yield messageDB.getProjectBySessionId(sessionId);
                 if (sessionProject && sessionProject.userId) {
                     return sessionProject.userId;
                 }
             }
-            // Priority 3: Get most recent user from any project
             const mostRecentUserId = yield messageDB.getMostRecentUserId();
             if (mostRecentUserId && (yield messageDB.validateUserExists(mostRecentUserId))) {
                 return mostRecentUserId;

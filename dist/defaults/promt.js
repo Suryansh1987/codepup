@@ -3028,7 +3028,6 @@ exports.pro5Enhanced2 = "You are an expert web developer creating modern website
     "- Suggest follow-up implementations rather than trying to include everything\n" +
     "- Always maintain complete, working code within the token limit\n" +
     "- Always make sure to import all the lucide react icons that you are using in the code files for for example when you are using <Phone/> for any lucide react icon you need to import it from lucide-react like import {  Phone } from 'lucide-react and similarly for all other icons too'\n" +
-    "\n" +
     "## CRITICAL: TAILWIND CONFIG GENERATION\n" +
     "**ALWAYS generate `tailwind.config.ts` as the FIRST file in every response.**\n" +
     "- Use the EXACT template below with SOLID colors (NO CSS variables)\n" +
@@ -3045,151 +3044,151 @@ exports.pro5Enhanced2 = "You are an expert web developer creating modern website
     "\n" +
     "### REQUIRED TAILWIND CONFIG TEMPLATE:\n" +
     "```typescript\n" +
-    "import type { Config } from \"tailwindcss\";\n" +
+    'import type { Config } from "tailwindcss";\n' +
     "\n" +
     "export default {\n" +
-    "  darkMode: [\"class\"],\n" +
+    '  darkMode: ["class"],\n' +
     "  content: [\n" +
-    "    \"./pages/**/*.{ts,tsx}\",\n" +
-    "    \"./components/**/*.{ts,tsx}\",\n" +
-    "    \"./app/**/*.{ts,tsx}\",\n" +
-    "    \"./src/**/*.{ts,tsx}\",\n" +
+    '    "./pages/**/*.{ts,tsx}",\n' +
+    '    "./components/**/*.{ts,tsx}",\n' +
+    '    "./app/**/*.{ts,tsx}",\n' +
+    '    "./src/**/*.{ts,tsx}",\n' +
     "  ],\n" +
-    "  prefix: \"\",\n" +
+    '  prefix: "",\n' +
     "  theme: {\n" +
     "    container: {\n" +
     "      center: true,\n" +
-    "      padding: \"2rem\",\n" +
+    '      padding: "2rem",\n' +
     "      screens: {\n" +
-    "        \"2xl\": \"1400px\",\n" +
+    '        "2xl": "1400px",\n' +
     "      },\n" +
     "    },\n" +
     "    extend: {\n" +
     "      colors: {\n" +
     "        // Base colors - SOLID COLORS ONLY\n" +
-    "        border: \"#e2e8f0\",\n" +
-    "        input: \"#f1f5f9\", \n" +
-    "        ring: \"#3b82f6\",\n" +
-    "        background: \"#ffffff\",\n" +
-    "        foreground: \"#0f172a\",\n" +
+    '        border: "#e2e8f0",\n' +
+    '        input: "#f1f5f9", \n' +
+    '        ring: "#3b82f6",\n' +
+    '        background: "#ffffff",\n' +
+    '        foreground: "#0f172a",\n' +
     "        \n" +
     "        // Primary colors - CUSTOMIZE BASED ON INDUSTRY\n" +
     "        primary: {\n" +
-    "          DEFAULT: \"#3b82f6\", // Change this\n" +
-    "          foreground: \"#ffffff\",\n" +
-    "          50: \"#eff6ff\",\n" +
-    "          100: \"#dbeafe\",\n" +
-    "          200: \"#bfdbfe\",\n" +
-    "          300: \"#93c5fd\",\n" +
-    "          400: \"#60a5fa\",\n" +
-    "          500: \"#3b82f6\",\n" +
-    "          600: \"#2563eb\",\n" +
-    "          700: \"#1d4ed8\",\n" +
-    "          800: \"#1e40af\",\n" +
-    "          900: \"#1e3a8a\",\n" +
+    '          DEFAULT: "#3b82f6", // Change this\n' +
+    '          foreground: "#ffffff",\n' +
+    '          50: "#eff6ff",\n' +
+    '          100: "#dbeafe",\n' +
+    '          200: "#bfdbfe",\n' +
+    '          300: "#93c5fd",\n' +
+    '          400: "#60a5fa",\n' +
+    '          500: "#3b82f6",\n' +
+    '          600: "#2563eb",\n' +
+    '          700: "#1d4ed8",\n' +
+    '          800: "#1e40af",\n' +
+    '          900: "#1e3a8a",\n' +
     "        },\n" +
     "        \n" +
     "        // Secondary colors - CUSTOMIZE BASED ON INDUSTRY\n" +
     "        secondary: {\n" +
-    "          DEFAULT: \"#8b5cf6\", // Change this\n" +
-    "          foreground: \"#ffffff\",\n" +
-    "          50: \"#f5f3ff\",\n" +
-    "          100: \"#ede9fe\",\n" +
-    "          200: \"#ddd6fe\",\n" +
-    "          300: \"#c4b5fd\",\n" +
-    "          400: \"#a78bfa\",\n" +
-    "          500: \"#8b5cf6\",\n" +
-    "          600: \"#7c3aed\",\n" +
-    "          700: \"#6d28d9\",\n" +
-    "          800: \"#5b21b6\",\n" +
-    "          900: \"#4c1d95\",\n" +
+    '          DEFAULT: "#8b5cf6", // Change this\n' +
+    '          foreground: "#ffffff",\n' +
+    '          50: "#f5f3ff",\n' +
+    '          100: "#ede9fe",\n' +
+    '          200: "#ddd6fe",\n' +
+    '          300: "#c4b5fd",\n' +
+    '          400: "#a78bfa",\n' +
+    '          500: "#8b5cf6",\n' +
+    '          600: "#7c3aed",\n' +
+    '          700: "#6d28d9",\n' +
+    '          800: "#5b21b6",\n' +
+    '          900: "#4c1d95",\n' +
     "        },\n" +
     "        \n" +
     "        // Accent colors - CUSTOMIZE BASED ON INDUSTRY\n" +
     "        accent: {\n" +
-    "          DEFAULT: \"#06b6d4\", // Change this\n" +
-    "          foreground: \"#ffffff\",\n" +
-    "          50: \"#ecfeff\",\n" +
-    "          100: \"#cffafe\",\n" +
-    "          200: \"#a5f3fc\",\n" +
-    "          300: \"#67e8f9\",\n" +
-    "          400: \"#22d3ee\",\n" +
-    "          500: \"#06b6d4\",\n" +
-    "          600: \"#0891b2\",\n" +
-    "          700: \"#0e7490\",\n" +
-    "          800: \"#155e75\",\n" +
-    "          900: \"#164e63\",\n" +
+    '          DEFAULT: "#06b6d4", // Change this\n' +
+    '          foreground: "#ffffff",\n' +
+    '          50: "#ecfeff",\n' +
+    '          100: "#cffafe",\n' +
+    '          200: "#a5f3fc",\n' +
+    '          300: "#67e8f9",\n' +
+    '          400: "#22d3ee",\n' +
+    '          500: "#06b6d4",\n' +
+    '          600: "#0891b2",\n' +
+    '          700: "#0e7490",\n' +
+    '          800: "#155e75",\n' +
+    '          900: "#164e63",\n' +
     "        },\n" +
     "        \n" +
     "        // Status colors - KEEP THESE\n" +
     "        destructive: {\n" +
-    "          DEFAULT: \"#ef4444\",\n" +
-    "          foreground: \"#ffffff\",\n" +
+    '          DEFAULT: "#ef4444",\n' +
+    '          foreground: "#ffffff",\n' +
     "        },\n" +
     "        success: {\n" +
-    "          DEFAULT: \"#10b981\",\n" +
-    "          foreground: \"#ffffff\",\n" +
+    '          DEFAULT: "#10b981",\n' +
+    '          foreground: "#ffffff",\n' +
     "        },\n" +
     "        warning: {\n" +
-    "          DEFAULT: \"#f59e0b\",\n" +
-    "          foreground: \"#000000\",\n" +
+    '          DEFAULT: "#f59e0b",\n' +
+    '          foreground: "#000000",\n' +
     "        },\n" +
     "        \n" +
     "        // Neutral colors - KEEP THESE\n" +
     "        muted: {\n" +
-    "          DEFAULT: \"#f8fafc\",\n" +
-    "          foreground: \"#64748b\",\n" +
+    '          DEFAULT: "#f8fafc",\n' +
+    '          foreground: "#64748b",\n' +
     "        },\n" +
     "        popover: {\n" +
-    "          DEFAULT: \"#ffffff\",\n" +
-    "          foreground: \"#0f172a\",\n" +
+    '          DEFAULT: "#ffffff",\n' +
+    '          foreground: "#0f172a",\n' +
     "        },\n" +
     "        card: {\n" +
-    "          DEFAULT: \"#ffffff\",\n" +
-    "          foreground: \"#0f172a\",\n" +
+    '          DEFAULT: "#ffffff",\n' +
+    '          foreground: "#0f172a",\n' +
     "        },\n" +
     "        \n" +
     "        // Gray scale - KEEP THESE\n" +
     "        gray: {\n" +
-    "          50: \"#f8fafc\",\n" +
-    "          100: \"#f1f5f9\",\n" +
-    "          200: \"#e2e8f0\",\n" +
-    "          300: \"#cbd5e1\",\n" +
-    "          400: \"#94a3b8\",\n" +
-    "          500: \"#64748b\",\n" +
-    "          600: \"#475569\",\n" +
-    "          700: \"#334155\",\n" +
-    "          800: \"#1e293b\",\n" +
-    "          900: \"#0f172a\",\n" +
+    '          50: "#f8fafc",\n' +
+    '          100: "#f1f5f9",\n' +
+    '          200: "#e2e8f0",\n' +
+    '          300: "#cbd5e1",\n' +
+    '          400: "#94a3b8",\n' +
+    '          500: "#64748b",\n' +
+    '          600: "#475569",\n' +
+    '          700: "#334155",\n' +
+    '          800: "#1e293b",\n' +
+    '          900: "#0f172a",\n' +
     "        },\n" +
     "      },\n" +
     "      borderRadius: {\n" +
-    "        lg: \"0.5rem\",\n" +
-    "        md: \"0.375rem\",\n" +
-    "        sm: \"0.25rem\",\n" +
+    '        lg: "0.5rem",\n' +
+    '        md: "0.375rem",\n' +
+    '        sm: "0.25rem",\n' +
     "      },\n" +
     "      keyframes: {\n" +
-    "        \"accordion-down\": {\n" +
-    "          from: { height: \"0\" },\n" +
-    "          to: { height: \"var(--radix-accordion-content-height)\" },\n" +
+    '        "accordion-down": {\n' +
+    '          from: { height: "0" },\n' +
+    '          to: { height: "var(--radix-accordion-content-height)" },\n' +
     "        },\n" +
-    "        \"accordion-up\": {\n" +
-    "          from: { height: \"var(--radix-accordion-content-height)\" },\n" +
-    "          to: { height: \"0\" },\n" +
+    '        "accordion-up": {\n' +
+    '          from: { height: "var(--radix-accordion-content-height)" },\n' +
+    '          to: { height: "0" },\n' +
     "        },\n" +
-    "        \"fade-in\": {\n" +
-    "          \"0%\": { opacity: \"0\" },\n" +
-    "          \"100%\": { opacity: \"1\" },\n" +
+    '        "fade-in": {\n' +
+    '          "0%": { opacity: "0" },\n' +
+    '          "100%": { opacity: "1" },\n' +
     "        },\n" +
     "      },\n" +
     "      animation: {\n" +
-    "        \"accordion-down\": \"accordion-down 0.2s ease-out\",\n" +
-    "        \"accordion-up\": \"accordion-up 0.2s ease-out\",\n" +
-    "        \"fade-in\": \"fade-in 0.5s ease-out\",\n" +
+    '        "accordion-down": "accordion-down 0.2s ease-out",\n' +
+    '        "accordion-up": "accordion-up 0.2s ease-out",\n' +
+    '        "fade-in": "fade-in 0.5s ease-out",\n' +
     "      },\n" +
     "    },\n" +
     "  },\n" +
-    "  plugins: [require(\"tailwindcss-animate\")],\n" +
+    '  plugins: [require("tailwindcss-animate")],\n' +
     "} satisfies Config;\n" +
     "```\n" +
     "\n" +
@@ -3208,30 +3207,75 @@ exports.pro5Enhanced2 = "You are an expert web developer creating modern website
     '    "preview": "vite preview"\n' +
     "  },\n" +
     '  "dependencies": {\n' +
-    '    "@supabase/supabase-js": "^2.39.0",\n' +
-    '    "@tailwindcss/vite": "^4.1.11",\n' +
-    '    "@vitejs/plugin-react-swc": "^3.10.2",\n' +
-    '    "lovable-tagger": "^1.1.8",\n' +
-    '    "lucide-react": "^0.263.1",\n' +
-    '    "react": "^18.2.0",\n' +
-    '    "react-dom": "^18.2.0",\n' +
-    '    "react-hot-toast": "^2.4.1",\n' +
-    '    "react-router-dom": "^6.8.0"\n' +
+    '    "@hookform/resolvers": "^3.9.0",\n' +
+    '    "@radix-ui/react-accordion": "^1.2.0",\n' +
+    '    "@radix-ui/react-alert-dialog": "^1.1.1",\n' +
+    '    "@radix-ui/react-aspect-ratio": "^1.1.0",\n' +
+    '    "@radix-ui/react-avatar": "^1.1.0",\n' +
+    '    "@radix-ui/react-checkbox": "^1.1.1",\n' +
+    '    "@radix-ui/react-collapsible": "^1.1.0",\n' +
+    '    "@radix-ui/react-context-menu": "^2.2.1",\n' +
+    '    "@radix-ui/react-dialog": "^1.1.2",\n' +
+    '    "@radix-ui/react-dropdown-menu": "^2.1.1",\n' +
+    '    "@radix-ui/react-hover-card": "^1.1.1",\n' +
+    '    "@radix-ui/react-label": "^2.1.0",\n' +
+    '    "@radix-ui/react-menubar": "^1.1.1",\n' +
+    '    "@radix-ui/react-navigation-menu": "^1.2.0",\n' +
+    '    "@radix-ui/react-popover": "^1.1.1",\n' +
+    '    "@radix-ui/react-progress": "^1.1.0",\n' +
+    '    "@radix-ui/react-radio-group": "^1.2.0",\n' +
+    '    "@radix-ui/react-scroll-area": "^1.1.0",\n' +
+    '    "@radix-ui/react-select": "^2.1.1",\n' +
+    '    "@radix-ui/react-separator": "^1.1.0",\n' +
+    '    "@radix-ui/react-slider": "^1.2.0",\n' +
+    '    "@radix-ui/react-slot": "^1.1.0",\n' +
+    '    "@radix-ui/react-switch": "^1.1.0",\n' +
+    '    "@radix-ui/react-tabs": "^1.1.0",\n' +
+    '    "@radix-ui/react-toast": "^1.2.1",\n' +
+    '    "@radix-ui/react-toggle": "^1.1.0",\n' +
+    '    "@radix-ui/react-toggle-group": "^1.1.0",\n' +
+    '    "@radix-ui/react-tooltip": "^1.1.4",\n' +
+    '    "@tanstack/react-query": "^5.56.2",\n' +
+    '    "axios": "^1.9.0",\n' +
+    '    "class-variance-authority": "^0.7.1",\n' +
+    '    "clsx": "^2.1.1",\n' +
+    '    "cmdk": "^1.0.0",\n' +
+    '    "date-fns": "^3.6.0",\n' +
+    '    "embla-carousel-react": "^8.3.0",\n' +
+    '    "input-otp": "^1.2.4",\n' +
+    '    "lucide-react": "^0.462.0",\n' +
+    '    "next-themes": "^0.3.0",\n' +
+    '    "react": "^18.3.1",\n' +
+    '    "react-day-picker": "^8.10.1",\n' +
+    '    "react-dom": "^18.3.1",\n' +
+    '    "react-hook-form": "^7.53.0",\n' +
+    '    "react-resizable-panels": "^2.1.3",\n' +
+    '    "react-router-dom": "^6.26.2",\n' +
+    '    "recharts": "^2.12.7",\n' +
+    '    "sonner": "^1.5.0",\n' +
+    '    "tailwind-merge": "^2.5.2",\n' +
+    '    "tailwindcss-animate": "^1.0.7",\n' +
+    '    "vaul": "^0.9.3",\n' +
+    '    "zod": "^3.23.8"\n' +
     "  },\n" +
     '  "devDependencies": {\n' +
-    '    "@types/react": "^18.2.15",\n' +
-    '    "@types/react-dom": "^18.2.7",\n' +
-    '    "@typescript-eslint/eslint-plugin": "^6.0.0",\n' +
-    '    "@typescript-eslint/parser": "^6.0.0",\n' +
-    '    "@vitejs/plugin-react": "^4.0.3",\n' +
-    '    "autoprefixer": "^10.4.14",\n' +
-    '    "eslint": "^8.45.0",\n' +
-    '    "eslint-plugin-react-hooks": "^4.6.0",\n' +
-    '    "eslint-plugin-react-refresh": "^0.4.3",\n' +
-    '    "postcss": "^8.4.27",\n' +
-    '    "tailwindcss": "^3.3.3",\n' +
-    '    "tailwindcss-animate": "^1.0.7",\n' +
-    '    "typescript": "^5.0.2",\n' +
+    '    "@eslint/js": "^9.9.0",\n' +
+    '    "@tailwindcss/typography": "^0.5.15",\n' +
+    '    "@types/node": "^22.5.5",\n' +
+    '    "@types/react": "^18.3.3",\n' +
+    '    "@types/react-dom": "^18.3.0",\n' +
+    '    "@vitejs/plugin-react-swc": "^3.5.0",\n' +
+    '    "autoprefixer": "^10.4.20",\n' +
+    '    "eslint": "^9.9.0",\n' +
+    '    "eslint-plugin-react-hooks": "^5.1.0-rc.0",\n' +
+    '    "eslint-plugin-react-refresh": "^0.4.9",\n' +
+    '    "globals": "^15.9.0",\n' +
+    '    "lovable-tagger": "^1.1.7",\n' +
+    '    "postcss": "^8.4.47",\n' +
+    '    "tailwindcss": "^3.4.11",\n' +
+    '    "tsx": "^4.19.4",\n' +
+    '    "typescript": "^5.5.3",\n' +
+    '    "typescript-eslint": "^8.0.1",\n' +
     '    "vite": "^5.4.1"\n' +
     "  }\n" +
     "}\n" +

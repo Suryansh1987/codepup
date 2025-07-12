@@ -119,19 +119,19 @@ async function cleanupTempDirectory(buildId: string): Promise<void> {
   }
 }
 
-// ADD THIS ENTIRE FUNCTION
+
 async function resolveUserId(
   messageDB: DrizzleMessageHistoryDB,
   providedUserId?: number,
   sessionId?: string
 ): Promise<number> {
   try {
-    // Priority 1: Use provided userId if valid
+
     if (providedUserId && await messageDB.validateUserExists(providedUserId)) {
       return providedUserId;
     }
 
-    // Priority 2: Get userId from session's most recent project
+   
     if (sessionId) {
       const sessionProject = await messageDB.getProjectBySessionId(sessionId);
       if (sessionProject && sessionProject.userId) {
@@ -139,7 +139,7 @@ async function resolveUserId(
       }
     }
 
-    // Priority 3: Get most recent user from any project
+
     const mostRecentUserId = await messageDB.getMostRecentUserId();
     if (mostRecentUserId && await messageDB.validateUserExists(mostRecentUserId)) {
       return mostRecentUserId;
@@ -293,7 +293,6 @@ if (projectId) {
       template: 'vite-react-ts',
       lastMessageAt: new Date(),
       updatedAt: new Date(),
-      // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
       supabaseurl: supabaseUrl,        // Note: lowercase 'url'
       aneonkey: supabaseAnonKey        // Note: 'aneonkey' not 'supabaseAnonKey'
     });
@@ -640,8 +639,6 @@ if (projectId) {
               framework: 'react',
               template: 'vite-react-ts'
             },
-            supabaseUrl,
-            supabaseAnonKey
           );
           console.log(`[${buildId}] ✅ Enhanced URL Manager - Successfully updated project ${finalProjectId}`);
         } catch (projectError) {

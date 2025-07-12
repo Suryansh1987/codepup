@@ -708,8 +708,6 @@ if (secrets) {
                   framework: userProject?.framework || 'react',
                   template: userProject?.template || 'vite-react-ts'
                 },
-           secrets.aneonkey ?? '',      // ✅ convert `string | null` to `string`
-  secrets.supabaseurl ?? ''
               );
 
               urlResult = { 
@@ -1137,8 +1135,6 @@ if (secrets) {
                     framework: targetProject?.framework || 'react',
                     template: targetProject?.template || 'vite-react-ts'
                   },
-                  secrets.aneonkey ?? '',      // ✅ convert `string | null` to `string`
-  secrets.supabaseurl ?? ''
                 );
 
                 urlResult = { 
