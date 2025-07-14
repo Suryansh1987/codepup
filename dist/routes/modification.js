@@ -383,7 +383,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
     const urlManager = new url_manager_1.EnhancedProjectUrlManager(messageDB);
     // STATELESS STREAMING MODIFICATION ENDPOINT WITH URL-BASED RESOLUTION
     router.post("/stream", (req, res) => __awaiter(this, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d;
         const { prompt, sessionId: clientSessionId, userId: providedUserId, currentUrl, deployedUrl, projectId: requestedProjectId } = req.body;
         if (!prompt) {
             res.status(400).json({
@@ -566,22 +566,13 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                 tempBuildDir,
                 lastActivity: Date.now()
             });
-            let enhancedPrompt = prompt;
-            try {
-                const context = yield conversationHelper.getEnhancedContext(sessionId);
-                if (context) {
-                    enhancedPrompt = `${context}\n\n--- CURRENT REQUEST ---\n${prompt}`;
-                    sendEvent('progress', { step: 5, total: 16, message: 'Loaded conversation context!', buildId, sessionId });
-                }
-            }
-            catch (_h) {
-                sendEvent('progress', { step: 5, total: 16, message: 'Continuing with fresh modification...', buildId, sessionId });
-            }
-            const fileModifier = new filemodifier_1.StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId);
+            const enhancedPrompt = prompt; // Use clean prompt only
+            sendEvent('progress', { step: 5, total: 16, message: 'Using clean prompt for better component naming...', buildId, sessionId });
+            const fileModifier = new filemodifier_1.StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId, undefined, messageDB);
             fileModifier.setStreamCallback((message) => sendEvent('progress', { step: 7, total: 16, message, buildId, sessionId }));
             sendEvent('progress', { step: 6, total: 16, message: 'Starting intelligent modification...', buildId, sessionId });
             const startTime = Date.now();
-            const result = yield fileModifier.processModification(enhancedPrompt, undefined, (_b = sessionContext === null || sessionContext === void 0 ? void 0 : sessionContext.projectSummary) === null || _b === void 0 ? void 0 : _b.summary, (summary, prompt) => __awaiter(this, void 0, void 0, function* () {
+            const result = yield fileModifier.processModification(enhancedPrompt, undefined, undefined, requestedProjectId, (summary, prompt) => __awaiter(this, void 0, void 0, function* () {
                 try {
                     const summaryId = yield messageDB.saveProjectSummary(summary, prompt, "", buildId, userId);
                     console.log(`💾 Saved project summary, ID: ${summaryId}`);
@@ -644,8 +635,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                 description: userProject === null || userProject === void 0 ? void 0 : userProject.description,
                                 framework: (userProject === null || userProject === void 0 ? void 0 : userProject.framework) || 'react',
                                 template: (userProject === null || userProject === void 0 ? void 0 : userProject.template) || 'vite-react-ts'
-                            }, (_c = secrets.aneonkey) !== null && _c !== void 0 ? _c : '', // ✅ convert `string | null` to `string`
-                            (_d = secrets.supabaseurl) !== null && _d !== void 0 ? _d : '');
+                            });
                             urlResult = {
                                 action: 'updated',
                                 projectId: updatedProjectId,
@@ -677,12 +667,12 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                             approach: result.approach || 'UNKNOWN',
                             selectedFiles: result.selectedFiles || [],
                             addedFiles: result.addedFiles || [],
-                            modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_e = result.modifiedRanges) === null || _e === void 0 ? void 0 : _e.length) || 0),
+                            modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_b = result.modifiedRanges) === null || _b === void 0 ? void 0 : _b.length) || 0),
                             reasoning: result.reasoning,
                             modificationSummary: result.modificationSummary,
                             modificationDuration,
                             totalDuration,
-                            totalFilesAffected: (((_f = result.selectedFiles) === null || _f === void 0 ? void 0 : _f.length) || 0) + (((_g = result.addedFiles) === null || _g === void 0 ? void 0 : _g.length) || 0),
+                            totalFilesAffected: (((_c = result.selectedFiles) === null || _c === void 0 ? void 0 : _c.length) || 0) + (((_d = result.addedFiles) === null || _d === void 0 ? void 0 : _d.length) || 0),
                             previewUrl,
                             downloadUrl: urls.downloadUrl,
                             zipUrl,
@@ -764,7 +754,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
     }));
     // NON-STREAMING MODIFICATION ENDPOINT WITH URL-BASED RESOLUTION
     router.post("/", (req, res) => __awaiter(this, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e, _f, _g;
+        var _a, _b, _c, _d;
         try {
             const { prompt, sessionId: clientSessionId, userId: providedUserId, currentUrl, // NEW: Current page URL
             deployedUrl, projectId: requestedProjectId // NEW: Deployed app URL
@@ -918,21 +908,13 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                     lastActivity: Date.now()
                 });
                 // Get enhanced context
-                let enhancedPrompt = prompt;
-                try {
-                    const context = yield conversationHelper.getEnhancedContext(sessionId);
-                    if (context) {
-                        enhancedPrompt = `${context}\n\n--- CURRENT REQUEST ---\n${prompt}`;
-                    }
-                }
-                catch (contextError) {
-                    console.error('Context loading error:', contextError);
-                }
+                const enhancedPrompt = prompt; // Use clean prompt only
+                console.log(`[${buildId}] Using clean prompt for better component naming...`);
                 // Initialize stateless file modifier
-                const fileModifier = new filemodifier_1.StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId);
+                const fileModifier = new filemodifier_1.StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId, undefined, messageDB);
                 const startTime = Date.now();
                 // Process modification
-                const result = yield fileModifier.processModification(enhancedPrompt, undefined, (_a = sessionContext === null || sessionContext === void 0 ? void 0 : sessionContext.projectSummary) === null || _a === void 0 ? void 0 : _a.summary, (summary, prompt) => __awaiter(this, void 0, void 0, function* () {
+                const result = yield fileModifier.processModification(enhancedPrompt, undefined, undefined, requestedProjectId, (summary, prompt) => __awaiter(this, void 0, void 0, function* () {
                     try {
                         const summaryId = yield messageDB.saveProjectSummary(summary, prompt, "", buildId, userId);
                         console.log(`💾 Saved project summary, ID: ${summaryId}`);
@@ -1009,8 +991,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                     description: targetProject === null || targetProject === void 0 ? void 0 : targetProject.description,
                                     framework: (targetProject === null || targetProject === void 0 ? void 0 : targetProject.framework) || 'react',
                                     template: (targetProject === null || targetProject === void 0 ? void 0 : targetProject.template) || 'vite-react-ts'
-                                }, (_b = secrets.aneonkey) !== null && _b !== void 0 ? _b : '', // ✅ convert `string | null` to `string`
-                                (_c = secrets.supabaseurl) !== null && _c !== void 0 ? _c : '');
+                                });
                                 urlResult = {
                                     action: 'updated',
                                     projectId: updatedProjectId,
@@ -1042,12 +1023,12 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                 approach: result.approach || 'UNKNOWN',
                                 selectedFiles: result.selectedFiles || [],
                                 addedFiles: result.addedFiles || [],
-                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_d = result.modifiedRanges) === null || _d === void 0 ? void 0 : _d.length) || 0),
+                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_a = result.modifiedRanges) === null || _a === void 0 ? void 0 : _a.length) || 0),
                                 conversationContext: "Enhanced context with Redis-backed modification history",
                                 reasoning: result.reasoning,
                                 modificationSummary: result.modificationSummary,
                                 modificationDuration: modificationDuration,
-                                totalFilesAffected: (((_e = result.selectedFiles) === null || _e === void 0 ? void 0 : _e.length) || 0) + (((_f = result.addedFiles) === null || _f === void 0 ? void 0 : _f.length) || 0),
+                                totalFilesAffected: (((_b = result.selectedFiles) === null || _b === void 0 ? void 0 : _b.length) || 0) + (((_c = result.addedFiles) === null || _c === void 0 ? void 0 : _c.length) || 0),
                                 previewUrl: previewUrl,
                                 downloadUrl: urls.downloadUrl,
                                 zipUrl: zipUrl,
@@ -1084,7 +1065,7 @@ function initializeModificationRoutes(anthropic, messageDB, redis, sessionManage
                                 approach: result.approach || 'UNKNOWN',
                                 selectedFiles: result.selectedFiles || [],
                                 addedFiles: result.addedFiles || [],
-                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_g = result.modifiedRanges) === null || _g === void 0 ? void 0 : _g.length) || 0),
+                                modifiedRanges: typeof result.modifiedRanges === 'number' ? result.modifiedRanges : (((_d = result.modifiedRanges) === null || _d === void 0 ? void 0 : _d.length) || 0),
                                 buildError: buildError instanceof Error ? buildError.message : 'Build failed',
                                 buildId: buildId,
                                 sessionId: sessionId,

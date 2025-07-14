@@ -7,3 +7,4 @@ export declare const pro4: string;
 export declare const pro5: string;
 export declare const pro5Enhanced: string;
 export declare const pro5Enhanced2: string;
+export declare const pro5Enhanced3: string;

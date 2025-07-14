@@ -762,9 +762,30 @@ class DrizzleMessageHistoryDB {
             }
         });
     }
-    /**
-     * Update existing project summary with new ZIP URL and buildId
-     */
+    getProjectStructure(projectId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Get ALL project data in one query
+                const project = yield this.db
+                    .select()
+                    .from(message_schema_1.projects)
+                    .where((0, drizzle_orm_1.eq)(message_schema_1.projects.id, projectId))
+                    .limit(1);
+                if (project.length === 0) {
+                    console.log(`Project ${projectId} not found`);
+                    return null;
+                }
+                const projectData = project[0];
+                // Return the complete project data as JSON
+                // The analysis engine can then differentiate what it needs
+                return JSON.stringify(projectData);
+            }
+            catch (error) {
+                console.error(`Error getting project structure for project ${projectId}:`, error);
+                return null;
+            }
+        });
+    }
     updateProjectSummary(summaryId, zipUrl, buildId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {

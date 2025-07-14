@@ -963,10 +963,32 @@ async updateProject(projectId: number, updateData: {
       return null;
     }
   }
+async getProjectStructure(projectId: number): Promise<string | null> {
+  try {
+    // Get ALL project data in one query
+    const project = await this.db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, projectId))
+      .limit(1);
+    
+    if (project.length === 0) {
+      console.log(`Project ${projectId} not found`);
+      return null;
+    }
+    
+    const projectData = project[0];
+    
+    // Return the complete project data as JSON
+    // The analysis engine can then differentiate what it needs
+    return JSON.stringify(projectData);
+    
+  } catch (error) {
+    console.error(`Error getting project structure for project ${projectId}:`, error);
+    return null;
+  }
+}
 
-  /**
-   * Update existing project summary with new ZIP URL and buildId
-   */
   async updateProjectSummary(
     summaryId: string, 
     zipUrl: string, 

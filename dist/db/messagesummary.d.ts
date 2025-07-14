@@ -176,9 +176,7 @@ export declare class DrizzleMessageHistoryDB {
     linkSessionToProject(sessionId: string, projectId: number): Promise<void>;
     incrementProjectMessageCount(sessionId: string): Promise<void>;
     saveProjectSummary(summary: string, prompt: string, zipUrl?: string, buildId?: string, userId?: number): Promise<string | null>;
-    /**
-     * Update existing project summary with new ZIP URL and buildId
-     */
+    getProjectStructure(projectId: number): Promise<string | null>;
     updateProjectSummary(summaryId: string, zipUrl: string, buildId: string): Promise<boolean>;
     /**
      * Get the active project summary with ZIP URL and buildId

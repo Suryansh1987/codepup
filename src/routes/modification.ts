@@ -595,18 +595,11 @@ if (secrets) {
         lastActivity: Date.now()
       });
 
-      let enhancedPrompt = prompt;
-      try {
-        const context = await conversationHelper.getEnhancedContext(sessionId);
-        if (context) {
-          enhancedPrompt = `${context}\n\n--- CURRENT REQUEST ---\n${prompt}`;
-          sendEvent('progress', { step: 5, total: 16, message: 'Loaded conversation context!', buildId, sessionId });
-        }
-      } catch {
-        sendEvent('progress', { step: 5, total: 16, message: 'Continuing with fresh modification...', buildId, sessionId });
-      }
+     const enhancedPrompt = prompt; // Use clean prompt only
+sendEvent('progress', { step: 5, total: 16, message: 'Using clean prompt for better component naming...', buildId, sessionId });
 
-      const fileModifier = new StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId);
+
+      const fileModifier = new StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId,undefined, messageDB );
       fileModifier.setStreamCallback((message) => sendEvent('progress', { step: 7, total: 16, message, buildId, sessionId }));
 
       sendEvent('progress', { step: 6, total: 16, message: 'Starting intelligent modification...', buildId, sessionId });
@@ -616,7 +609,8 @@ if (secrets) {
       const result = await fileModifier.processModification(
         enhancedPrompt,
         undefined,
-        sessionContext?.projectSummary?.summary,
+        undefined,
+         requestedProjectId ,
         async (summary, prompt) => {
           try {
             const summaryId = await messageDB.saveProjectSummary(summary, prompt, "", buildId, userId);
@@ -1011,18 +1005,12 @@ if (secrets) {
         });
 
         // Get enhanced context
-        let enhancedPrompt = prompt;
-        try {
-          const context = await conversationHelper.getEnhancedContext(sessionId);
-          if (context) {
-            enhancedPrompt = `${context}\n\n--- CURRENT REQUEST ---\n${prompt}`;
-          }
-        } catch (contextError) {
-          console.error('Context loading error:', contextError);
-        }
+       const enhancedPrompt = prompt; // Use clean prompt only
+console.log(`[${buildId}] Using clean prompt for better component naming...`);
+
 
         // Initialize stateless file modifier
-        const fileModifier = new StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId);
+        const fileModifier = new StatelessIntelligentFileModifier(anthropic, tempBuildDir, sessionId,undefined,messageDB);
         
         const startTime = Date.now();
         
@@ -1030,7 +1018,8 @@ if (secrets) {
         const result = await fileModifier.processModification(
           enhancedPrompt,
           undefined,
-          sessionContext?.projectSummary?.summary,
+          undefined,
+           requestedProjectId ,
           async (summary: string, prompt: string) => {
             try {
               const summaryId = await messageDB.saveProjectSummary(summary, prompt, "", buildId, userId);

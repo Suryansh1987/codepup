@@ -346,7 +346,7 @@ if (projectId) {
       const frontendResult = await anthropic.messages
         .stream({
           model: "claude-sonnet-4-0",
-          max_tokens: 50000,
+          max_tokens: 60000,
           temperature: 1,
           system: pro5Enhanced2,
           messages: [
@@ -389,6 +389,7 @@ if (projectId) {
 
       const resp = await frontendResult.finalMessage();
       const claudeResponse = (resp.content[0] as any).text;
+      const structure = ((resp.content[1] as any)).text;
       
       sendStreamingUpdate(res, {
         type: 'progress',
@@ -635,7 +636,7 @@ if (projectId) {
             userId,
             {
               name: `Generated Project ${buildId.substring(0, 8)}`,
-              description: `React project with enhanced validation`,
+              description: structure,
               framework: 'react',
               template: 'vite-react-ts'
             },

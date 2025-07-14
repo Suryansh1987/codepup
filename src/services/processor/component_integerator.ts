@@ -804,351 +804,236 @@ export class IntegrationEngine {
   /**
    * 🔥 ENHANCED: EXECUTE INTEGRATION WITH SMART SKIPPING
    */
- private async executeIntegration(
-  generationResult: GenerationResult,
-  integrationAnalysis: IntegrationAnalysis
-): Promise<IntegrationResult> {
-  const maxRetries = 2;
-  let currentAttempt = 0;
-  
-  while (currentAttempt < maxRetries) {
-    this.streamUpdate(`🔄 Attempt ${currentAttempt + 1}/${maxRetries}: Generating integration files...`);
+  private async executeIntegration(
+    generationResult: GenerationResult,
+    integrationAnalysis: IntegrationAnalysis
+  ): Promise<IntegrationResult> {
+    const createdFiles: string[] = [];
+    const modifiedFiles: string[] = [];
+    const skippedFiles: string[] = [];
+    const warnings: string[] = [];
+    const integrationResults = {
+      routingUpdated: false,
+      appFileUpdated: false,
+      navigationUpdated: false,
+      headerUpdated: false,
+      footerUpdated: false,
+      dependenciesResolved: false,
+      usageExampleAdded: false,
+      pagesUpdated: [] as string[],
+      routeAlreadyExisted: integrationAnalysis.navigationAnalysis.routeAlreadyExists,
+      navigationAlreadyExists: integrationAnalysis.navigationAnalysis.routeAlreadyExists
+    };
+
+    // Filter out skipped files
+    const activeFiles = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
+      .filter(plan => !plan.skipReason);
     
-    try {
-      // Create original files map for validation
-      const originalFiles = new Map<string, string>();
-      const contextFiles = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
-        .filter(plan => plan.exists && !plan.skipReason)
-        .map(plan => {
-          const fileData = generationResult.projectFiles.get(plan.filePath);
-          if (fileData) {
-            originalFiles.set(plan.filePath, fileData.content);
-          }
-          return fileData;
-        })
-        .filter(Boolean);
+    const skippedPlans = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
+      .filter(plan => plan.skipReason);
 
-      // Generate appropriate prompt
-      const batchIntegrationPrompt = integrationAnalysis.isPageComponent 
-        ? this.createPageIntegrationPrompt(generationResult, integrationAnalysis, contextFiles as any[])
-        : this.createComponentIntegrationPrompt(generationResult, integrationAnalysis, contextFiles as any[]);
+    // Log skipped files
+    skippedPlans.forEach(plan => {
+      skippedFiles.push(`${plan.filePath}: ${plan.skipReason}`);
+      this.streamUpdate(`   ⏭️  Skipped: ${plan.filePath} - ${plan.skipReason}`);
+    });
 
-      const response = await this.anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20240620',
-        max_tokens: 8000,
-        temperature: 0.1,
-        messages: [{ role: 'user', content: batchIntegrationPrompt }]
-      });
+    const sortedPlans = activeFiles.sort((a, b) => a.priority - b.priority);
 
-      const responseText = response.content[0]?.type === 'text' ? response.content[0].text : '';
-      
-      // Validate the response
-      const validation = this.validateResponseContent(responseText, originalFiles);
-      
-      if (!validation.isValid) {
-        this.streamUpdate(`❌ Attempt ${currentAttempt + 1} failed validation:`);
-        validation.errors.forEach(error => this.streamUpdate(`   • ${error}`));
+    if (sortedPlans.length === 0) {
+      this.streamUpdate('   ⚠️  No files to process after filtering');
+      return {
+        success: true,
+        createdFiles,
+        modifiedFiles,
+        skippedFiles,
+        integrationResults,
+        warnings
+      };
+    }
+
+    // Prepare context for batch integration
+    const contextFiles = sortedPlans
+      .filter(plan => plan.exists)
+      .map(plan => {
+        const fileData = generationResult.projectFiles.get(plan.filePath);
+        if (!fileData) return null;
         
-        if (currentAttempt < maxRetries - 1) {
-          this.streamUpdate('🔄 Retrying with stricter prompt...');
-          currentAttempt++;
-          continue;
+        return {
+          path: plan.filePath,
+          content: fileData.content,
+          purpose: plan.purpose,
+          integrationType: plan.integrationType,
+          navigationFileType: plan.navigationFileType,
+          contentLength: fileData.content.length,
+          isLargeFile: fileData.content.length > 5000
+        };
+      })
+      .filter(Boolean);
+
+    this.streamUpdate('🎨 2.2.1: Generating files with smart integration...');
+    
+    // Create appropriate integration prompt based on type
+    const batchIntegrationPrompt = integrationAnalysis.isPageComponent 
+      ? this.createPageIntegrationPrompt(generationResult, integrationAnalysis, contextFiles as any[])
+      : this.createComponentIntegrationPrompt(generationResult, integrationAnalysis, contextFiles as any[]);
+
+    const response = await this.anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20240620',
+      max_tokens: 8000,
+      temperature: 0.1,
+      messages: [{ role: 'user', content: batchIntegrationPrompt }]
+    });
+
+    const text = response.content[0]?.type === 'text' ? response.content[0].text : '';
+    
+    // Parse generated files
+    const results = this.parseGeneratedFiles(text, sortedPlans);
+
+    this.streamUpdate('💾 2.2.2: Writing files...');
+
+    // Write files and track results
+    for (const [filePath, content] of results.entries()) {
+      try {
+        const plan = sortedPlans.find(p => p.filePath === filePath);
+        if (!plan) continue;
+
+        await this.writeFile(filePath, content);
+
+        if (plan.exists) {
+          modifiedFiles.push(filePath);
+          this.streamUpdate(`   ✅ Modified: ${filePath}`);
+          
+          // Track specific integration types
+          if (plan.integrationType === 'routing') {
+            integrationResults.routingUpdated = true;
+            integrationResults.appFileUpdated = true;
+          }
+          if (plan.integrationType === 'navigation') {
+            integrationResults.navigationUpdated = true;
+            if (plan.navigationFileType === 'header') integrationResults.headerUpdated = true;
+            if (plan.navigationFileType === 'footer') integrationResults.footerUpdated = true;
+          }
+          if (plan.integrationType === 'usage') {
+            integrationResults.usageExampleAdded = true;
+            integrationResults.pagesUpdated.push(filePath);
+          }
         } else {
-          throw new Error(`Integration failed after ${maxRetries} attempts: ${validation.errors.join(', ')}`);
+          createdFiles.push(filePath);
+          this.streamUpdate(`   ✅ Created: ${filePath}`);
         }
-      }
-
-      if (validation.warnings.length > 0) {
-        this.streamUpdate('⚠️ Validation warnings:');
-        validation.warnings.forEach(warning => this.streamUpdate(`   • ${warning}`));
-      }
-
-      this.streamUpdate('✅ Response validation passed - proceeding with file generation');
-      
-      // Continue with existing integration logic...
-      return await this.executeIntegration(generationResult, integrationAnalysis);
-      
-    } catch (error) {
-      if (currentAttempt < maxRetries - 1) {
-        this.streamUpdate(`❌ Attempt ${currentAttempt + 1} failed: ${error}`);
-        this.streamUpdate('🔄 Retrying...');
-        currentAttempt++;
-        continue;
-      } else {
-        throw error;
+      } catch (error) {
+        this.streamUpdate(`   ❌ Failed to write ${filePath}: ${error}`);
+        warnings.push(`Failed to write ${filePath}: ${error}`);
       }
     }
-  }
 
-  throw new Error(`Integration failed after ${maxRetries} attempts`);
-}
+    integrationResults.dependenciesResolved = createdFiles.length > 0 || modifiedFiles.length > 0;
+
+    return {
+      success: createdFiles.length > 0 || modifiedFiles.length > 0,
+      createdFiles,
+      modifiedFiles,
+      skippedFiles,
+      integrationResults,
+      warnings: warnings.length > 0 ? warnings : undefined
+    };
+  }
 
   /**
    * 🔥 ENHANCED: PAGE INTEGRATION PROMPT WITH CLEAN NAMING
    */
- private createComponentIntegrationPrompt(
-  generationResult: GenerationResult,
-  integrationAnalysis: IntegrationAnalysis,
-  contextFiles: Array<{
-    path: string, 
-    content: string, 
-    purpose: string, 
-    integrationType: string, 
-    contentLength: number, 
-    isLargeFile: boolean
-  }>
-): string {
-  const { componentType, generatedContent } = generationResult;
-  
-  const cleanDisplayName = integrationAnalysis.componentDisplayName;
-  const importPath = `@/components/${cleanDisplayName}`;
-  
-  const contextContent = contextFiles.map(f => {
-    // 🔥 CRITICAL: Add explicit warning for large files
-    const sizeWarning = f.isLargeFile ? `
-🚨🚨🚨 CRITICAL: THIS IS A LARGE FILE (${f.contentLength} chars)
-YOU MUST OUTPUT THE COMPLETE CONTENT - NO TRUNCATION ALLOWED
-DO NOT USE "..." OR "// existing content" OR ANY PLACEHOLDER COMMENTS
-INCLUDE EVERY SINGLE LINE FROM THE ORIGINAL FILE
-🚨🚨🚨` : '';
+  private createPageIntegrationPrompt(
+    generationResult: GenerationResult,
+    integrationAnalysis: IntegrationAnalysis,
+    contextFiles: Array<{
+      path: string, 
+      content: string, 
+      purpose: string, 
+      integrationType: string, 
+      navigationFileType?: string,
+      contentLength: number, 
+      isLargeFile: boolean
+    }>
+  ): string {
+    const { componentType, generatedContent } = generationResult;
     
-    return `FILE: ${f.path}
-PURPOSE: ${f.purpose}
-TYPE: ${f.integrationType}
-SIZE: ${f.contentLength} chars${sizeWarning}
-
-COMPLETE ORIGINAL CONTENT (MUST BE PRESERVED 100%):
-${f.content}`;
-  }).join('\n\n---\n\n');
-
-  const filesToGenerate = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
-    .filter(plan => !plan.skipReason)
-    .map(plan => `- ${plan.exists ? 'MODIFY' : 'CREATE'} ${plan.filePath} (${plan.purpose})`)
-    .join('\n');
-
-  const usageContext = integrationAnalysis.usageAnalysis.hasPages ? `
-🎯 COMPONENT USAGE INTEGRATION:
-- Clean component name: ${cleanDisplayName}
-- Show practical usage examples with realistic props
-- Add import statements and component usage
-- PRESERVE 100% OF EXISTING PAGE CONTENT - NO EXCEPTIONS
-
-TARGET PAGES FOR COMPONENT USAGE:
-${integrationAnalysis.usageAnalysis.pageFiles.map(pageFile => `
-- ${pageFile.filePath} (${pageFile.type.toUpperCase()}):
-  * Priority: ${pageFile.isMainPage ? 'HIGH (Main Page)' : 'NORMAL'}
-  * Strategy: Add ${cleanDisplayName} import and usage example while preserving ALL existing content
-`).join('')}
-
-🚨 CRITICAL: NO NAVIGATION LINKS for components - only usage examples!
-` : 'USAGE: No suitable pages found for component integration';
-
-  return `
-TASK: COMPONENT Integration for ${cleanDisplayName} with COMPLETE content preservation
-
-🚨🚨🚨 ABSOLUTE RULES - VIOLATION WILL CAUSE COMPLETE FAILURE:
-1. NEVER WRITE "// ... (content remains unchanged)" OR ANY PLACEHOLDER COMMENTS
-2. NEVER WRITE "/* ... existing content ... */" OR SIMILAR TRUNCATION
-3. NEVER WRITE "// ... rest of the code" OR "// ... other imports"
-4. NEVER USE "..." OR ELLIPSIS TO REPRESENT EXISTING CODE
-5. INCLUDE EVERY SINGLE LINE FROM THE ORIGINAL FILE IN YOUR OUTPUT
-6. IF A FILE HAS 200 LINES, YOUR OUTPUT MUST HAVE 200+ LINES (PLUS YOUR ADDITIONS)
-7. COPY-PASTE MENTALITY: TREAT THIS LIKE YOU'RE COPYING THE ENTIRE FILE AND ADDING NEW CODE
-
-🚨 EXAMPLES OF FORBIDDEN OUTPUT:
-❌ import React from 'react';
-❌ // ... (other imports)
-❌ const Dashboard = () => {
-❌   // ... (existing state)
-❌   return <div>...</div>
-❌ }
-
-✅ CORRECT OUTPUT EXAMPLE:
-✅ import React, { useState, useEffect } from 'react';
-✅ import { useAuth } from '../contexts/AuthContext';
-✅ import { useCart } from '../contexts/CartContext';
-✅ import { supabase } from '../lib/supabase';
-✅ import { toast } from 'sonner';
-✅ import { ShoppingCart, Heart, User, Package, Star, CreditCard, Calendar, Eye, Trash2, Plus, Minus } from 'lucide-react';
-✅ import ${cleanDisplayName} from "${importPath}";
-✅ 
-✅ const Dashboard = () => {
-✅   const [activeTab, setActiveTab] = useState('overview');
-✅   const [cartItems, setCartItems] = useState([]);
-✅   // ... INCLUDE EVERY SINGLE LINE OF ORIGINAL CODE
-✅   return (
-✅     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-background to-secondary-50 py-8">
-✅       {/* INCLUDE EVERY SINGLE LINE OF ORIGINAL JSX */}
-✅       <${cleanDisplayName} prop1="value" />
-✅       {/* CONTINUE WITH ALL ORIGINAL CONTENT */}
-✅     </div>
-✅   );
-✅ };
-
-COMPONENT DETAILS:
-- Type: COMPONENT
-- Clean Name: ${cleanDisplayName} (was: ${componentType.name})
-- File: ${integrationAnalysis.mainComponentFile.filePath}
-- Import Path: ${importPath}
-
-GENERATED COMPONENT CODE:
-\`\`\`tsx
-${generatedContent.replace(new RegExp(`export default ${componentType.name}`, 'g'), `export default ${cleanDisplayName}`)}
-\`\`\`
-
-${usageContext}
-
-FILES TO PROCESS:
-${filesToGenerate}
-
-EXISTING FILES WITH COMPLETE CONTENT:
-${contextContent}
-
-🚨 CONTENT PRESERVATION VALIDATION CHECKLIST:
-Before outputting each file, verify:
-□ Does my output contain ANY placeholder comments? (If YES, REWRITE COMPLETELY)
-□ Did I include EVERY import from the original file?
-□ Did I include EVERY function from the original file?
-□ Did I include EVERY piece of JSX from the original file?
-□ Did I only ADD new code without removing anything?
-□ Is my output file LONGER than the original (because I added content)?
-
-🚨 CRITICAL NAMING RULES:
-1. Component name MUST be: ${cleanDisplayName}
-2. Import MUST be: import ${cleanDisplayName} from "${importPath}"
-3. Usage MUST be: <${cleanDisplayName} prop="value" />
-
-COMPONENT INTEGRATION REQUIREMENTS:
-1. Add import at top with existing imports
-2. Add component usage in logical places
-3. Preserve EVERY SINGLE LINE of existing code
-4. Show realistic component usage examples
-5. NO navigation links (components don't go in navigation)
-
-🚨 RESPONSE FORMAT - COMPLETE FILES ONLY:
-=== FILE: path/to/file.tsx ===
-\`\`\`tsx
-[COMPLETE FILE CONTENT - EVERY SINGLE LINE FROM ORIGINAL PLUS NEW ADDITIONS]
-\`\`\`
-
-🚨 FINAL WARNING: 
-If you write ANY placeholder comments or truncate ANY content, the integration will FAIL.
-Your job is to be a COPY-PASTE MACHINE that includes EVERYTHING and adds new content.
-Think of it as: "Take the original file, add my new import and usage, output EVERYTHING."
-
-Generate ALL files with COMPLETE content now:
-`;
-}
-
-/**
- * 🔥 FIXED: PAGE INTEGRATION PROMPT WITH ZERO TOLERANCE FOR PLACEHOLDERS
- */
-private createPageIntegrationPrompt(
-  generationResult: GenerationResult,
-  integrationAnalysis: IntegrationAnalysis,
-  contextFiles: Array<{
-    path: string, 
-    content: string, 
-    purpose: string, 
-    integrationType: string, 
-    navigationFileType?: string,
-    contentLength: number, 
-    isLargeFile: boolean
-  }>
-): string {
-  const { componentType, generatedContent } = generationResult;
-  
-  const cleanDisplayName = integrationAnalysis.componentDisplayName;
-  const cleanRoutePath = integrationAnalysis.componentRoutePath;
-  const importPath = `./pages/${cleanDisplayName}`;
-  
-  const contextContent = contextFiles.map(f => {
-    // 🔥 CRITICAL: Add explicit warning for large files
-    const sizeWarning = f.isLargeFile ? `
-🚨🚨🚨 CRITICAL: THIS IS A LARGE FILE (${f.contentLength} chars)
-YOU MUST OUTPUT THE COMPLETE CONTENT - NO TRUNCATION ALLOWED
-DO NOT USE "..." OR "// existing content" OR ANY PLACEHOLDER COMMENTS
-INCLUDE EVERY SINGLE LINE FROM THE ORIGINAL FILE
-🚨🚨🚨` : '';
+    // Use clean naming from integration analysis
+    const cleanDisplayName = integrationAnalysis.componentDisplayName;
+    const cleanRoutePath = integrationAnalysis.componentRoutePath;
     
-    const navTypeInfo = f.navigationFileType ? `\nNAVIGATION TYPE: ${f.navigationFileType.toUpperCase()}` : '';
+    // Generate proper import path with @/ alias for pages
+    const importPath = `./pages/${cleanDisplayName}`;
     
-    return `FILE: ${f.path}
-PURPOSE: ${f.purpose}
-TYPE: ${f.integrationType}${navTypeInfo}
-SIZE: ${f.contentLength} chars${sizeWarning}
+    const contextContent = contextFiles.map(f => {
+      const truncationWarning = f.isLargeFile ? '\n⚠️  LARGE FILE - INCLUDE ALL CONTENT IN OUTPUT' : '';
+      const navTypeInfo = f.navigationFileType ? `\nNAVIGATION TYPE: ${f.navigationFileType.toUpperCase()}` : '';
+      return `FILE: ${f.path}\nPURPOSE: ${f.purpose}\nTYPE: ${f.integrationType}${navTypeInfo}\nSIZE: ${f.contentLength} chars${truncationWarning}\nCONTENT:\n${f.content}`;
+    }).join('\n\n---\n\n');
 
-COMPLETE ORIGINAL CONTENT (MUST BE PRESERVED 100%):
-${f.content}`;
-  }).join('\n\n---\n\n');
+    const filesToGenerate = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
+      .filter(plan => !plan.skipReason)
+      .map(plan => {
+        const navType = plan.navigationFileType ? ` (${plan.navigationFileType.toUpperCase()})` : '';
+        return `- ${plan.exists ? 'MODIFY' : 'CREATE'} ${plan.filePath}${navType} (${plan.purpose})`;
+      })
+      .join('\n');
 
-  const filesToGenerate = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
-    .filter(plan => !plan.skipReason)
-    .map(plan => {
-      const navType = plan.navigationFileType ? ` (${plan.navigationFileType.toUpperCase()})` : '';
-      return `- ${plan.exists ? 'MODIFY' : 'CREATE'} ${plan.filePath}${navType} (${plan.purpose})`;
-    })
-    .join('\n');
-
-  // Navigation context with strict preservation rules
-  const navigationContext = integrationAnalysis.navigationAnalysis.routeAlreadyExists ? `
+    // Smart navigation context based on route analysis
+    const navigationContext = integrationAnalysis.navigationAnalysis.routeAlreadyExists ? `
 🚨 ROUTE ALREADY EXISTS - COMPONENT CREATION ONLY:
-- Route /${cleanRoutePath} already exists in navigation
-- Strategy: Create component file only, NO navigation modifications
+- Route /${cleanRoutePath} already exists in navigation: ${integrationAnalysis.navigationAnalysis.matchingNavigationFile}
+- Existing routes detected: ${integrationAnalysis.navigationAnalysis.existingPageRoutes.join(', ')}
+- Strategy: Create component file only, NO navigation modifications needed
+- This prevents duplicate routes and maintains existing navigation structure
+
+NAVIGATION ANALYSIS:
+${integrationAnalysis.navigationAnalysis.navigationFiles.map(navFile => `
+- File: ${navFile.filePath} (${navFile.type.toUpperCase()})
+- Has matching route: ${navFile.hasMatchingRoute ? 'YES' : 'NO'}
+- Page routes: ${navFile.pageRouteCount}/6
+- Existing routes: ${navFile.existingRoutes.join(', ') || 'None'}
+`).join('')}
 ` : integrationAnalysis.navigationAnalysis.hasNavigation ? `
-✅ NEW ROUTE INTEGRATION - WITH COMPLETE FILE PRESERVATION:
+✅ NEW ROUTE INTEGRATION - FULL NAVIGATION UPDATE:
 - Route /${cleanRoutePath} is NEW and can be added to navigation
-- MUST preserve ALL existing navigation structure
-- MUST include ALL existing routes and links
-- Only ADD new route, never remove existing content
+- Display name: ${cleanDisplayName}
+- MUST add navigation link in appropriate navigation files
+- Maintain existing navigation structure and styling
+
+${integrationAnalysis.navigationAnalysis.shouldUpdateAppOnly ? `
+🛑 HEADER IS FULL (6+ PAGE ROUTES) - APP.TSX ONLY UPDATE:
+- Header already has maximum recommended page routes
+- DO NOT modify header or other navigation files
+- ONLY update App.tsx with new route
+
+HEADER ANALYSIS:
+${integrationAnalysis.navigationAnalysis.navigationFiles
+  .filter(f => f.type === 'header')
+  .map(headerFile => `
+- File: ${headerFile.filePath}
+- Page Routes: ${headerFile.pageRouteCount}/6 (FULL)
+- Strategy: SKIP navigation update, APP.TSX ONLY
+`).join('')}
+` : `
+✅ HEADER CAN ACCEPT NEW PAGES - FULL INTEGRATION:
+- Header has space for new page routes (< 6 routes)
+- MUST add navigation link in files marked for update
+- Use clean path: /${cleanRoutePath}
+- Use clean display name: ${cleanDisplayName}
+
+NAVIGATION FILES TO UPDATE:
+${integrationAnalysis.navigationAnalysis.navigationFiles.map(navFile => `
+- ${navFile.filePath} (${navFile.type.toUpperCase()}):
+  * Page Routes: ${navFile.pageRouteCount}/6 ${navFile.canAddMorePages ? '(CAN ADD)' : '(FULL)'}
+  * Update Required: ${navFile.needsRouteUpdate ? 'YES' : 'NO'}
+  * Style: ${navFile.type === 'footer' ? 'Simple footer link' : 'Full navigation with hover effects'}
+`).join('')}
+`}
 ` : 'NAVIGATION: None found in project';
 
-  return `
-TASK: PAGE Integration for ${cleanDisplayName} with COMPLETE content preservation
-
-🚨🚨🚨 ABSOLUTE RULES - VIOLATION WILL CAUSE COMPLETE FAILURE:
-1. NEVER WRITE "// ... (content remains unchanged)" OR ANY PLACEHOLDER COMMENTS
-2. NEVER WRITE "/* ... existing content ... */" OR SIMILAR TRUNCATION
-3. NEVER WRITE "// ... rest of the JSX" OR "// ... other routes"
-4. NEVER USE "..." OR ELLIPSIS TO REPRESENT EXISTING CODE
-5. INCLUDE EVERY SINGLE LINE FROM THE ORIGINAL FILE IN YOUR OUTPUT
-6. FOR APP.TSX: INCLUDE ALL EXISTING ROUTES + ADD NEW ROUTE
-7. FOR NAVIGATION: INCLUDE ALL EXISTING LINKS + ADD NEW LINK
-
-🚨 EXAMPLES OF FORBIDDEN OUTPUT:
-❌ import React from 'react';
-❌ // ... (other imports)
-❌ function App() {
-❌   return (
-❌     <Router>
-❌       <Routes>
-❌         // ... (existing routes)
-❌         <Route path="/${cleanRoutePath}" element={<${cleanDisplayName} />} />
-❌       </Routes>
-❌     </Router>
-❌   );
-❌ }
-
-✅ CORRECT OUTPUT EXAMPLE:
-✅ import React from 'react';
-✅ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-✅ import Home from './pages/Home';
-✅ import About from './pages/About';
-✅ import Contact from './pages/Contact';
-✅ import ${cleanDisplayName} from "${importPath}";
-✅ 
-✅ function App() {
-✅   return (
-✅     <Router>
-✅       <Routes>
-✅         <Route path="/" element={<Home />} />
-✅         <Route path="/about" element={<About />} />
-✅         <Route path="/contact" element={<Contact />} />
-✅         <Route path="/${cleanRoutePath}" element={<${cleanDisplayName} />} />
-✅       </Routes>
-✅     </Router>
-✅   );
-✅ }
+    return `
+TASK: SMART PAGE Integration for ${cleanDisplayName} with intelligent naming and route detection
 
 COMPONENT DETAILS:
 - Type: PAGE
@@ -1157,126 +1042,206 @@ COMPONENT DETAILS:
 - File: ${integrationAnalysis.mainComponentFile.filePath}
 - Import Path: ${importPath}
 
-GENERATED PAGE CODE:
+GENERATED PAGE CODE (UPDATE THE EXPORT NAME TO USE CLEAN NAME):
 \`\`\`tsx
 ${generatedContent.replace(new RegExp(`export default ${componentType.name}`, 'g'), `export default ${cleanDisplayName}`)}
 \`\`\`
+
+PROJECT PATTERNS:
+- Export: ${integrationAnalysis.projectPatterns.exportPattern}
+- Import: ${integrationAnalysis.projectPatterns.importPattern}
+- Routing: ${integrationAnalysis.projectPatterns.routingPattern}
+- App File: ${integrationAnalysis.projectPatterns.appFilePath || 'NONE'}
 
 ${navigationContext}
 
 FILES TO PROCESS:
 ${filesToGenerate}
 
-EXISTING FILES WITH COMPLETE CONTENT:
+EXISTING FILES CONTEXT:
 ${contextContent}
 
-🚨 CONTENT PRESERVATION VALIDATION CHECKLIST:
-Before outputting each file, verify:
-□ Does my output contain ANY placeholder comments? (If YES, REWRITE COMPLETELY)
-□ Did I include EVERY import from the original file?
-□ Did I include EVERY route from the original App.tsx?
-□ Did I include EVERY navigation link from the original header/navbar?
-□ Did I include EVERY function and component from the original file?
-□ Did I only ADD new content without removing anything?
-□ Is my output file LONGER than the original (because I added content)?
+EXISTING ROUTES: ${integrationAnalysis.existingRoutes.join(', ') || 'NONE'}
 
 🚨 CRITICAL NAMING RULES:
-1. Component name MUST be: ${cleanDisplayName}
-2. Route path MUST be: /${cleanRoutePath}
-3. Import MUST be: import ${cleanDisplayName} from "${importPath}"
+1. Component name MUST be: ${cleanDisplayName} (clean, no "Page" suffix)
+2. Route path MUST be: /${cleanRoutePath} (clean, lowercase)
+3. Display text in navigation MUST be: ${cleanDisplayName}
+4. File export MUST be: export default ${cleanDisplayName}
+
+🚨 CRITICAL NAVIGATION RULES:
+${integrationAnalysis.navigationAnalysis.routeAlreadyExists ? `
+1. DO NOT MODIFY ANY NAVIGATION FILES (Route already exists)
+2. Route /${cleanRoutePath} already exists in: ${integrationAnalysis.navigationAnalysis.matchingNavigationFile}
+3. Only create the component file, skip all navigation updates
+4. This prevents duplicate routes and navigation conflicts
+` : integrationAnalysis.navigationAnalysis.shouldUpdateAppOnly ? `
+1. DO NOT MODIFY HEADER OR OTHER NAVIGATION FILES (Header is full)
+2. ONLY UPDATE App.tsx with new route
+3. New route: <Route path="/${cleanRoutePath}" element={<${cleanDisplayName} />} />
+4. Import: import ${cleanDisplayName} from "${importPath}"
+` : `
+1. ADD navigation link to files that need updates (< 6 page routes)
+2. PRESERVE all existing navigation links and structure  
+3. Add new link at logical position (usually end of page routes)
+4. Use clean format: path="/${cleanRoutePath}" and text="${cleanDisplayName}"
+5. Maintain consistent styling with existing navigation
+`}
+
+🚨 CRITICAL CONTENT PRESERVATION RULES:
+1. NEVER use placeholder comments like "// ... (content remains unchanged)"
+2. NEVER truncate or omit existing file content
+3. For EXISTING files: Include COMPLETE file content with modifications
+4. For NEW files: Generate complete, functional code with clean naming
+5. Preserve ALL imports, ALL functions, ALL JSX content
+6. Only ADD new content, never remove existing content
+
+🚨 CRITICAL IMPORT PATH REQUIREMENTS:
+- Pages use relative paths: import ${cleanDisplayName} from "${importPath}"
+- NO src/ paths: avoid "src/pages/" or "src/components/"
+- Use clean relative imports: "./pages/CleanName"
 
 PAGE INTEGRATION REQUIREMENTS:
-1. Add import to App.tsx with existing imports
-2. Add route to App.tsx with existing routes
-3. Add navigation link to header/navbar if space available
-4. Preserve EVERY SINGLE LINE of existing code
-5. Show new route alongside all existing routes
+1. Use clean component name: export default ${cleanDisplayName}
+2. Use relative path imports: import ${cleanDisplayName} from "${importPath}"
+3. Add route to App.tsx: <Route path="/${cleanRoutePath}" element={<${cleanDisplayName} />} />
+4. Navigation links use clean display name: ${cleanDisplayName}
+5. Preserve ALL existing routes and imports
+6. Maintain existing file structures completely
 
-🚨 RESPONSE FORMAT - COMPLETE FILES ONLY:
+RESPONSE FORMAT:
 === FILE: path/to/file.tsx ===
 \`\`\`tsx
-[COMPLETE FILE CONTENT - EVERY SINGLE LINE FROM ORIGINAL PLUS NEW ADDITIONS]
+[COMPLETE FILE CONTENT WITH ALL EXISTING CONTENT PRESERVED AND CLEAN NAMING]
 \`\`\`
 
-🚨 FINAL WARNING: 
-If you write ANY placeholder comments or truncate ANY content, the integration will FAIL.
-Your job is to be a COPY-PASTE MACHINE that includes EVERYTHING and adds new content.
-Think of it as: "Take the original file, add my new import/route/link, output EVERYTHING."
-
-Generate ALL files with COMPLETE content now:
+Generate ALL files with COMPLETE content preservation and SMART naming now:
 `;
-}
-
-/**
- * 🔥 NEW: ADD RESPONSE VALIDATION TO REJECT PLACEHOLDER RESPONSES
- */
-private validateResponseContent(responseText: string, originalFiles: Map<string, string>): {
-  isValid: boolean;
-  errors: string[];
-  warnings: string[];
-} {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-
-  // Check for forbidden placeholder patterns
-  const forbiddenPatterns = [
-    /\/\/\s*\.\.\.\s*\(/,  // // ... (
-    /\/\*\s*\.\.\.\s*\*\//, // /* ... */
-    /\/\/\s*existing/i,     // // existing
-    /\/\/\s*rest\s*of/i,    // // rest of
-    /\/\/\s*other/i,        // // other
-    /\.\.\.\s*\)/,          // ... )
-    /remains\s*unchanged/i,  // remains unchanged
-    /content\s*above/i,      // content above
-    /as\s*before/i          // as before
-  ];
-
-  for (const pattern of forbiddenPatterns) {
-    if (pattern.test(responseText)) {
-      errors.push(`Found forbidden placeholder pattern: ${pattern.source}`);
-    }
   }
 
-  // Extract files from response
-  const filePattern = /=== FILE: (.+?) ===\s*```(?:tsx|typescript|jsx|javascript)\s*([\s\S]*?)```/g;
-  let match;
-  const generatedFiles = new Map<string, string>();
-
-  while ((match = filePattern.exec(responseText)) !== null) {
-    const filePath = match[1].trim();
-    const content = match[2].trim();
-    generatedFiles.set(filePath, content);
-  }
-
-  // Validate each generated file against original
-  for (const [filePath, generatedContent] of generatedFiles) {
-    const originalContent = originalFiles.get(filePath);
+  /**
+   * 🔥 ENHANCED: COMPONENT INTEGRATION PROMPT WITH CLEAN NAMING
+   */
+  private createComponentIntegrationPrompt(
+    generationResult: GenerationResult,
+    integrationAnalysis: IntegrationAnalysis,
+    contextFiles: Array<{
+      path: string, 
+      content: string, 
+      purpose: string, 
+      integrationType: string, 
+      contentLength: number, 
+      isLargeFile: boolean
+    }>
+  ): string {
+    const { componentType, generatedContent } = generationResult;
     
-    if (originalContent) {
-      // Check if generated content is significantly shorter (indicating truncation)
-      const originalLines = originalContent.split('\n').length;
-      const generatedLines = generatedContent.split('\n').length;
-      
-      if (generatedLines < originalLines * 0.8) {
-        errors.push(`File ${filePath}: Generated content is too short (${generatedLines} vs ${originalLines} lines) - likely truncated`);
-      }
+    // Use clean naming from integration analysis
+    const cleanDisplayName = integrationAnalysis.componentDisplayName;
+    
+    // Generate proper import path with @/ alias for components
+    const importPath = `@/components/${cleanDisplayName}`;
+    
+    const contextContent = contextFiles.map(f => {
+      const truncationWarning = f.isLargeFile ? '\n⚠️  LARGE FILE - INCLUDE ALL CONTENT IN OUTPUT' : '';
+      return `FILE: ${f.path}\nPURPOSE: ${f.purpose}\nTYPE: ${f.integrationType}\nSIZE: ${f.contentLength} chars${truncationWarning}\nCONTENT:\n${f.content}`;
+    }).join('\n\n---\n\n');
 
-      // Check if key imports are missing
-      const originalImports = originalContent.match(/^import\s+.+$/gm) || [];
-      const generatedImports = generatedContent.match(/^import\s+.+$/gm) || [];
-      
-      if (originalImports.length > generatedImports.length) {
-        warnings.push(`File ${filePath}: Some imports may be missing (${generatedImports.length} vs ${originalImports.length})`);
-      }
-    }
+    const filesToGenerate = [integrationAnalysis.mainComponentFile, ...integrationAnalysis.integrationFiles]
+      .filter(plan => !plan.skipReason)
+      .map(plan => `- ${plan.exists ? 'MODIFY' : 'CREATE'} ${plan.filePath} (${plan.purpose})`)
+      .join('\n');
+
+    const usageContext = integrationAnalysis.usageAnalysis.hasPages ? `
+🎯 COMPONENT USAGE INTEGRATION:
+- Clean component name: ${cleanDisplayName}
+- Show practical usage examples with realistic props
+- Add import statements and component usage
+- Preserve ALL existing page content
+
+TARGET PAGES FOR COMPONENT USAGE:
+${integrationAnalysis.usageAnalysis.pageFiles.map(pageFile => `
+- ${pageFile.filePath} (${pageFile.type.toUpperCase()}):
+  * Priority: ${pageFile.isMainPage ? 'HIGH (Main Page)' : 'NORMAL'}
+  * AI Reason: ${pageFile.aiReason || 'Smart targeting applied'}
+  * Existing imports: ${pageFile.componentImports.join(', ') || 'None'}
+  * Strategy: Add ${cleanDisplayName} usage example in appropriate section
+`).join('')}
+
+🚨 CRITICAL: NO NAVIGATION LINKS for components - only usage examples!
+` : 'USAGE: No suitable pages found for component integration';
+
+    return `
+TASK: COMPONENT Integration for ${cleanDisplayName} with clean naming and usage examples
+
+COMPONENT DETAILS:
+- Type: COMPONENT
+- Clean Name: ${cleanDisplayName} (was: ${componentType.name})
+- File: ${integrationAnalysis.mainComponentFile.filePath}
+- Import Path: ${importPath}
+- Integration Strategy: Usage examples in existing pages
+
+GENERATED COMPONENT CODE (UPDATE EXPORT NAME TO USE CLEAN NAME):
+\`\`\`tsx
+${generatedContent.replace(new RegExp(`export default ${componentType.name}`, 'g'), `export default ${cleanDisplayName}`)}
+\`\`\`
+
+PROJECT PATTERNS:
+- Export: ${integrationAnalysis.projectPatterns.exportPattern}
+- Import: ${integrationAnalysis.projectPatterns.importPattern}
+
+${usageContext}
+
+FILES TO PROCESS:
+${filesToGenerate}
+
+EXISTING FILES CONTEXT:
+${contextContent}
+
+🚨 CRITICAL NAMING RULES:
+1. Component name MUST be: ${cleanDisplayName} (clean, no redundant suffixes)
+2. File export MUST be: export default ${cleanDisplayName}
+3. Import statement MUST use: import ${cleanDisplayName} from "${importPath}"
+4. Usage examples MUST use: <${cleanDisplayName} prop="value" />
+
+🚨 CRITICAL CONTENT PRESERVATION RULES:
+1. NEVER use placeholder comments like "// ... (content remains unchanged)"
+2. NEVER truncate or omit existing file content
+3. For EXISTING files: Include COMPLETE file content with modifications
+4. For NEW files: Generate complete, functional code with clean naming
+5. Preserve ALL imports, ALL functions, ALL JSX content
+6. Only ADD new content, never remove existing content
+
+🚨 CRITICAL IMPORT PATH REQUIREMENTS:
+- Components use @/ alias: import ${cleanDisplayName} from "${importPath}"
+- NO src/ paths: avoid "src/components/" completely
+- Use clean @/ imports: "@/components/CleanName"
+
+COMPONENT INTEGRATION REQUIREMENTS:
+1. Use clean component name: export default ${cleanDisplayName}
+2. Use @/ alias imports: import ${cleanDisplayName} from "${importPath}"
+3. Add import statement at top with other imports
+4. Demonstrate component usage with realistic props
+5. Preserve ALL existing page functionality and content
+6. Only ADD the new component usage, don't modify existing content
+7. NO NAVIGATION LINKS - components don't get navigation entries
+8. Show component in logical sections of existing pages
+
+COMPONENT USAGE EXAMPLES:
+- Add import: import ${cleanDisplayName} from "${importPath}"
+- Show usage: <${cleanDisplayName} prop1="value1" prop2="value2" />
+- Use in appropriate sections of existing pages
+- Provide realistic, meaningful props based on component design
+
+RESPONSE FORMAT:
+=== FILE: path/to/file.tsx ===
+\`\`\`tsx
+[COMPLETE FILE CONTENT WITH ALL EXISTING CONTENT PRESERVED AND CLEAN NAMING]
+\`\`\`
+
+Generate ALL files with COMPLETE content preservation and clean naming now:
+`;
   }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-    warnings
-  };
-}
 
   // Keep existing methods for usage analysis, file detection, etc...
   // (The rest of the methods remain the same as in the original code)

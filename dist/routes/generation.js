@@ -208,7 +208,6 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
                         template: 'vite-react-ts',
                         lastMessageAt: new Date(),
                         updatedAt: new Date(),
-                        // USE THE CORRECT FIELD NAMES FROM YOUR SCHEMA:
                         supabaseurl: supabaseUrl, // Note: lowercase 'url'
                         aneonkey: supabaseAnonKey // Note: 'aneonkey' not 'supabaseAnonKey'
                     });
@@ -262,7 +261,7 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
             const frontendResult = yield anthropic.messages
                 .stream({
                 model: "claude-sonnet-4-0",
-                max_tokens: 50000,
+                max_tokens: 60000,
                 temperature: 1,
                 system: promt_1.pro5Enhanced2,
                 messages: [
@@ -300,6 +299,7 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
             });
             const resp = yield frontendResult.finalMessage();
             const claudeResponse = resp.content[0].text;
+            const structure = resp.content[1].text;
             sendStreamingUpdate(res, {
                 type: 'progress',
                 buildId,
@@ -503,10 +503,10 @@ function initializeGenerationRoutes(anthropic, messageDB, sessionManager) {
                         zipUrl: zipUrl
                     }, userId, {
                         name: `Generated Project ${buildId.substring(0, 8)}`,
-                        description: `React project with enhanced validation`,
+                        description: structure,
                         framework: 'react',
                         template: 'vite-react-ts'
-                    }, supabaseUrl, supabaseAnonKey);
+                    });
                     console.log(`[${buildId}] ✅ Enhanced URL Manager - Successfully updated project ${finalProjectId}`);
                 }
                 catch (projectError) {
